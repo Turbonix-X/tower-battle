@@ -22,3 +22,15 @@ body {
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
+
+#version {
+  position: fixed;
+  top: 8px;
+  left: 10px;
+  font: 12px system-ui, sans-serif;
+  color: rgba(255, 255, 255, 0.7);
+  /* Laisse passer les clics et le doigt vers la carte. */
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
