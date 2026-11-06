@@ -94,7 +94,8 @@ const Moteur = {
 
     Lignes.dessiner(ctx, partie, Vue);
     Soldats.dessiner(ctx, partie, Vue);
-    Lignes.dessinerTrace(ctx, partie, Vue);
+    Soldats.dessinerCombats(ctx, partie, Vue);
+    Lignes.dessinerGeste(ctx, partie, Vue);
     for (const tour of partie.tours) {
       const visee = partie.trace && (partie.trace.cible === tour || partie.trace.depart === tour);
       Tours.dessiner(ctx, tour, Vue, visee);

@@ -29,7 +29,9 @@ const Niveaux = {
       tours: niveau.tours.map((tour) => Tours.creer(tour)),
       lignes: [],
       soldats: [],
+      combats: [], // les animations de combat en cours
       trace: null, // la ligne en train d'être tracée
+      coupe: null, // le trait en train de couper des lignes
     };
   },
 };

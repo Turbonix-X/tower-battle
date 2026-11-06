@@ -9,13 +9,30 @@ const EQUIPES = {
 
 const EQUIPE_JOUEUR = 'bleu';
 
+// "lignesParNiveau" : combien de lignes peuvent partir en même temps aux niveaux 1, 2 et 3.
+const TYPES_DE_TOURS = {
+  base: { lignesParNiveau: [1, 2, 3] },
+};
+
+// Le nombre de soldats à partir duquel une tour atteint les niveaux 2 et 3.
+const SEUILS_NIVEAU = [10, 30];
+
 const Tours = {
   RAYON: 34,
   SOLDATS_PAR_SECONDE: 1,
 
   // Une tour a deux valeurs séparées : "soldats" (son attaque) et "pv" (sa durabilité).
-  creer({ x, y, equipe, soldats, pv }) {
-    return { x, y, equipe, soldats, pv, pvMax: pv, tempsProduction: 0 };
+  creer({ x, y, equipe, soldats, pv, type = 'base' }) {
+    return { x, y, equipe, type, soldats, pv, pvMax: pv, tempsProduction: 0, demiPerte: false };
+  },
+
+  // Le niveau découle du compteur : il monte et redescend tout seul avec les soldats.
+  niveau(tour) {
+    return 1 + SEUILS_NIVEAU.filter((seuil) => tour.soldats >= seuil).length;
+  },
+
+  lignesMax(tour) {
+    return TYPES_DE_TOURS[tour.type].lignesParNiveau[Tours.niveau(tour) - 1];
   },
 
   mettreAJour(tour, dt) {
@@ -32,6 +49,7 @@ const Tours = {
     tour.pv = tour.pvMax;
     tour.soldats = 0;
     tour.tempsProduction = 0;
+    tour.demiPerte = false;
   },
 
   // Renvoie la tour la plus proche du point (x, y), à moins de "portee" de son centre.
@@ -91,15 +109,30 @@ const Tours = {
     ctx.fillStyle = '#7ee06f';
     ctx.fillRect(barreX, barreY, largeurBarre * (tour.pv / tour.pvMax), hauteurBarre);
 
-    // Le compteur de soldats, au-dessus de la barre de PV.
+    // Les points de niveau, entre le compteur et la barre de PV.
+    const niveau = Tours.niveau(tour);
+    const rayonPoint = Math.max(2.5, 4 * vue.echelle);
+    const pointY = barreY - rayonPoint - 3;
+    for (let i = 0; i < niveau; i++) {
+      ctx.beginPath();
+      ctx.arc(x + (i - (niveau - 1) / 2) * rayonPoint * 3, pointY, rayonPoint, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd84d';
+      ctx.fill();
+      ctx.strokeStyle = '#10201a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Le compteur de soldats, tout en haut.
+    const compteurY = pointY - rayonPoint - 2;
     ctx.font = `bold ${Math.max(15, 24 * vue.echelle)}px system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.lineWidth = 4;
     ctx.lineJoin = 'round';
     ctx.strokeStyle = '#10201a';
-    ctx.strokeText(tour.soldats, x, barreY - 3);
+    ctx.strokeText(tour.soldats, x, compteurY);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(tour.soldats, x, barreY - 3);
+    ctx.fillText(tour.soldats, x, compteurY);
   },
 };
