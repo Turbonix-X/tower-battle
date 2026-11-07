@@ -10,11 +10,20 @@ const Generateur = {
   MARGE_BAS: 60,
   EQUIPES_ENNEMIES: ['rouge', 'jaune', 'vert', 'orange', 'violet'],
   PERSONNALITES: ['agressif', 'defenseur', 'ruse'],
-  // À partir de quel niveau apparaît chaque type de tour.
-  NIVEAU_MINES: 12,
-  NIVEAU_FORTERESSE: 15,
-  NIVEAU_CAMPEMENT: 25,
-  NIVEAU_TYPES_ENNEMIS: 80,
+  // Les niveaux auxquels chaque type apparaît sont dans donnees-tours.js et donnees-soldats.js.
+  NIVEAU_TUTORIEL: 10,
+  NIVEAU_TYPES_ENNEMIS: 80, // avant, les ennemis n'ont que des casernes
+  TYPES_VARIES: ['forteresse', 'campement', 'archers', 'canon', 'soin'],
+  CHANCE_PIEGE: 0.3,
+  CHANCE_GEANTE: 0.1,
+  // La tour à utiliser pour apprendre un type de soldat.
+  PRODUCTEURS: {
+    chevalier: 'forteresse',
+    coureur: 'campement',
+    bouclier: 'caserne',
+    eclaireur: 'campement',
+    soigneur: 'soin',
+  },
 
   // Un générateur aléatoire à graine (mulberry32).
   aleatoire(graine) {
@@ -122,6 +131,7 @@ const Generateur = {
 
     Generateur.choisirTypes(tours, numero, reglages, tirage);
     if (reglages.boss) Generateur.renforcerBoss(tours, ordis, reglages);
+    const tutoriel = Generateur.preparerApprentissage(tours, numero, reglages);
 
     return {
       numero,
@@ -130,6 +140,7 @@ const Generateur = {
       hauteur: reglages.hauteur,
       ordis,
       tours,
+      tutoriel,
       tempsEtoiles: Generateur.tempsEtoiles(reglages),
       decor: reglages.decor,
       obstacles: reglages.obstacles,
@@ -139,29 +150,94 @@ const Generateur = {
 
   // Les cartes deviennent plus variées au fil des niveaux. Le joueur démarre toujours en caserne.
   choisirTypes(tours, numero, reglages, tirage) {
-    const part = Math.min(0.4, 0.05 + 0.5 * reglages.avancee);
+    const part = Math.min(0.45, 0.06 + 0.5 * reglages.avancee);
     const neutres = tours.filter((tour) => tour.equipe === 'neutre');
+    const variantes = Generateur.TYPES_VARIES.filter((type) => Deblocages.tourDisponible(type, numero));
 
     for (const tour of tours) {
-      if (tour.equipe === EQUIPE_JOUEUR) continue;
+      if (tour.equipe === EQUIPE_JOUEUR || variantes.length === 0) continue;
       const ennemie = tour.equipe !== 'neutre';
-      const seuil = ennemie ? Generateur.NIVEAU_TYPES_ENNEMIS : 0;
+      if (ennemie && numero < Generateur.NIVEAU_TYPES_ENNEMIS) continue;
       const tirageType = tirage();
-      if (numero >= Math.max(seuil, Generateur.NIVEAU_FORTERESSE) && tirageType < part / 2) {
-        tour.type = 'forteresse';
-      } else if (numero >= Math.max(seuil, Generateur.NIVEAU_CAMPEMENT) && tirageType < part) {
-        tour.type = 'campement';
+      if (tirageType < part) {
+        tour.type = variantes[Math.floor((tirageType / part) * variantes.length)];
       }
     }
 
-    // Les mines sont toujours des tours neutres à capturer.
-    if (numero >= Generateur.NIVEAU_MINES) {
+    // Les types à part sont toujours des tours neutres à capturer.
+    const prendreNeutre = () =>
+      neutres.length > 0 ? neutres.splice(Generateur.entre(tirage, 0, neutres.length - 1), 1)[0] : null;
+
+    if (numero > Generateur.NIVEAU_TUTORIEL && Deblocages.tourDisponible('mine', numero)) {
       const nbMines = 1 + Math.floor(reglages.avancee * 3);
-      for (let i = 0; i < nbMines && neutres.length > 0; i++) {
-        const tour = neutres.splice(Generateur.entre(tirage, 0, neutres.length - 1), 1)[0];
-        tour.type = 'mine';
+      for (let i = 0; i < nbMines; i++) {
+        const tour = prendreNeutre();
+        if (tour) tour.type = 'mine';
       }
     }
+
+    // Le piège est appétissant : peu de soldats et peu de PV.
+    if (Deblocages.tourDisponible('piege', numero)) {
+      const nbPieges = tirage() < Generateur.CHANCE_PIEGE ? 1 + Math.floor(tirage() * 2) : 0;
+      for (let i = 0; i < nbPieges; i++) {
+        const tour = prendreNeutre();
+        if (tour) {
+          tour.type = 'piege';
+          tour.soldats = Math.min(tour.soldats, 4);
+        }
+      }
+    }
+
+    // La tour géante est rare.
+    if (Deblocages.tourDisponible('geante', numero) && tirage() < Generateur.CHANCE_GEANTE) {
+      const tour = prendreNeutre();
+      if (tour) tour.type = 'geante';
+    }
+  },
+
+  // Le niveau où un type apparaît sert à l'apprendre : le joueur l'a sous la main,
+  // et un conseil explique à quoi il sert. Renvoie les étapes du conseil.
+  preparerApprentissage(tours, numero, reglages) {
+    const nouveautes = Deblocages.auNiveau(numero);
+    if (nouveautes.length === 0 || numero <= Generateur.NIVEAU_TUTORIEL) return undefined;
+
+    const duJoueur = tours.find((tour) => tour.equipe === EQUIPE_JOUEUR);
+    const distance = (tour) => Math.hypot(tour.x - duJoueur.x, tour.y - duJoueur.y);
+    const prochesLibres = () =>
+      tours
+        .filter((tour) => tour.equipe === 'neutre' && (tour.type || 'caserne') === 'caserne')
+        .sort((a, b) => distance(a) - distance(b));
+
+    for (const { genre, type } of nouveautes) {
+      if (genre === 'tour') {
+        const proche = prochesLibres()[0];
+        if (!proche) continue;
+        proche.type = type;
+        if (type === 'mine' || type === 'piege') {
+          // Ces deux-là s'apprennent en les attaquant : une tour neutre juste à côté.
+          proche.soldats = 3;
+          proche.pv = 5;
+        } else {
+          proche.equipe = EQUIPE_JOUEUR;
+          proche.soldats = 12;
+          proche.pv = reglages.pvDepart;
+        }
+      } else {
+        // Une tour du joueur qui sait produire ce soldat, déjà réglée sur lui.
+        const producteur = Generateur.PRODUCTEURS[type];
+        let tour = tours.find((t) => t.equipe === EQUIPE_JOUEUR && (t.type || 'caserne') === producteur);
+        if (!tour) {
+          tour = prochesLibres()[0];
+          if (!tour) continue;
+          tour.type = producteur;
+          tour.equipe = EQUIPE_JOUEUR;
+          tour.soldats = 12;
+          tour.pv = reglages.pvDepart;
+        }
+        tour.typeSoldat = type;
+      }
+    }
+    return nouveautes.map(({ fiche }) => ({ action: 'temps', duree: 9, texte: fiche.description }));
   },
 
   // Le boss : une forteresse couronnée, bien plus solide, qui produit plus vite.

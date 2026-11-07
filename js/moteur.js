@@ -117,7 +117,13 @@ const Moteur = {
     if (victoire) Sauvegarde.enregistrerVictoire(numero, etoiles, pieces);
     InterfaceTours.fermerTout();
     Scene3D.finDePartie(victoire);
-    Menu.afficherFin({ victoire, temps, etoiles, pieces, aUnSuivant: numero < Niveaux.NOMBRE });
+    const afficherFin = () =>
+      Menu.afficherFin({ victoire, temps, etoiles, pieces, aUnSuivant: numero < Niveaux.NOMBRE });
+
+    // Si cette victoire débloque quelque chose, on le présente avant l'écran de fin.
+    const nouveautes = victoire ? Deblocages.nouveaux() : [];
+    if (nouveautes.length > 0) Menu.afficherDeblocages(nouveautes, afficherFin);
+    else afficherFin();
   },
 
   redimensionner() {
@@ -138,6 +144,7 @@ const Moteur = {
     if (Moteur.etat === 'enJeu') Moteur.mettreAJour(dt * Sauvegarde.donnees.parametres.vitesse);
     if (Moteur.etat === 'menu') Moteur.mettreAJourDemo(dt);
     Moteur.dessiner(dt);
+    Vignettes.animer(dt);
     requestAnimationFrame(Moteur.boucle);
   },
 
@@ -147,6 +154,7 @@ const Moteur = {
     Ordi.mettreAJour(partie, dt);
     for (const tour of partie.tours) Tours.mettreAJour(partie, tour, dt);
     Lignes.mettreAJour(partie, dt);
+    Tirs.mettreAJour(partie, dt);
     Soldats.mettreAJour(partie, dt);
     if (partie.evenements.length > Moteur.EVENEMENTS_MAX) partie.evenements.length = 0;
   },

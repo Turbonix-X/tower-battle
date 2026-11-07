@@ -10,8 +10,11 @@ const Sauvegarde = {
       niveauAtteint: 1,
       etoiles: {}, // numéro du niveau -> meilleur score (1 à 3)
       parametres: { musique: 70, effets: 80, vitesse: 1, langue: 'fr' },
-      pieces: 0, // gagnées à la fin des niveaux, pour débloquer des choses dans le menu
-      toursDebloquees: ['caserne'], // pour plus tard
+      pieces: 0, // gagnées à la fin des niveaux, à dépenser dans la boutique
+      deblocagesVus: [], // les types dont le joueur a déjà vu l'écran de présentation
+      skinsAchetes: { tours: ['classique'], soldats: ['classique'] },
+      skinTour: 'classique',
+      skinSoldat: 'classique',
     };
   },
 
@@ -49,10 +52,42 @@ const Sauvegarde = {
     // "argent" est l'ancien nom des pièces, dans les sauvegardes d'avant la version 1.6.
     const pieces = lu.pieces ?? lu.argent;
     if (Number.isFinite(pieces) && pieces >= 0) propre.pieces = pieces;
-    if (Array.isArray(lu.toursDebloquees) && lu.toursDebloquees.length > 0) {
-      propre.toursDebloquees = lu.toursDebloquees.map((t) => (t === 'base' ? 'caserne' : t));
+
+    // Une sauvegarde d'avant la version 1.7 n'a pas cette liste : ce qui est déjà
+    // accessible compte comme vu, pour ne pas présenter d'un coup tout ce qui existe.
+    if (Array.isArray(lu.deblocagesVus)) {
+      propre.deblocagesVus = lu.deblocagesVus.filter((cle) => typeof cle === 'string');
+    } else {
+      propre.deblocagesVus = Deblocages.liste()
+        .filter((e) => e.niveau <= propre.niveauAtteint)
+        .map(Deblocages.cle);
     }
+
+    const achetes = lu.skinsAchetes || {};
+    const garder = (liste, skins) =>
+      Array.isArray(liste) ? liste.filter((nom) => nom in skins && nom !== 'classique') : [];
+    propre.skinsAchetes.tours.push(...garder(achetes.tours, SKINS_TOURS));
+    propre.skinsAchetes.soldats.push(...garder(achetes.soldats, SKINS_SOLDATS));
+    if (propre.skinsAchetes.tours.includes(lu.skinTour)) propre.skinTour = lu.skinTour;
+    if (propre.skinsAchetes.soldats.includes(lu.skinSoldat)) propre.skinSoldat = lu.skinSoldat;
     return propre;
+  },
+
+  // La boutique : "genre" vaut 'tours' ou 'soldats'. Renvoie true si l'achat a réussi.
+  acheterSkin(genre, nom, prix) {
+    const { donnees } = Sauvegarde;
+    if (donnees.pieces < prix || donnees.skinsAchetes[genre].includes(nom)) return false;
+    donnees.pieces -= prix;
+    donnees.skinsAchetes[genre].push(nom);
+    Sauvegarde.equiperSkin(genre, nom);
+    return true;
+  },
+
+  equiperSkin(genre, nom) {
+    if (!Sauvegarde.donnees.skinsAchetes[genre].includes(nom)) return;
+    if (genre === 'tours') Sauvegarde.donnees.skinTour = nom;
+    else Sauvegarde.donnees.skinSoldat = nom;
+    Sauvegarde.enregistrer();
   },
 
   enregistrer() {

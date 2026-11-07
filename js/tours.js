@@ -36,7 +36,7 @@ const Tours = {
 
   // Une tour a deux valeurs séparées : "soldats" (son attaque) et "pv" (sa durabilité).
   // "bonusProduction" : une tour de boss produit plus vite que les autres.
-  creer({ x, y, equipe, soldats, pv, type = 'caserne', bonusProduction = 1, boss = false }) {
+  creer({ x, y, equipe, soldats, pv, type = 'caserne', bonusProduction = 1, boss = false, typeSoldat = null }) {
     const fiche = TYPES_DE_TOURS[type];
     const pvBase = Math.max(1, Math.round(pv * fiche.multiplicateurPv));
     return {
@@ -53,14 +53,64 @@ const Tours = {
       bonusProduction,
       boss,
       points: { renforcement: 0, production: 0, capacite: 0 },
+      typeSoldat, // le type de soldat choisi, s'il y en a plusieurs possibles
       tempsProduction: 0,
-      demiPerte: false,
+      perteEnCours: 0,
       detteEnvoi: 0,
+      tempsTir: 0,
+      dernierTir: -9,
+      visee: null, // ce que la tour a visé en dernier
+      tempsEffetSoin: 0,
     };
   },
 
   fiche(tour) {
     return TYPES_DE_TOURS[tour.type];
+  },
+
+  // Ce que voit le joueur : un piège se fait passer pour une caserne.
+  ficheVisible(tour) {
+    return TYPES_DE_TOURS[Tours.fiche(tour).apparence || tour.type];
+  },
+
+  // Les types de soldats que cette tour peut produire à ce niveau.
+  typesDeSoldats(tour, numero) {
+    return Tours.fiche(tour).soldats.filter((type) => Deblocages.soldatDisponible(type, numero));
+  },
+
+  // Le type de soldat qu'elle produit : le choix du joueur, sinon le premier possible.
+  typeDeSoldatActif(partie, tour) {
+    const types = Tours.typesDeSoldats(tour, partie.numero);
+    return types.includes(tour.typeSoldat) ? tour.typeSoldat : types[0] || null;
+  },
+
+  // La portée de tir dépend du niveau de la tour.
+  portee(tour) {
+    const { tir } = Tours.fiche(tour);
+    return tir ? tir.portee[Tours.niveau(tour) - 1] : 0;
+  },
+
+  // Le cercle à afficher quand la tour est sélectionnée : sa portée de tir ou de soin.
+  porteeAffichee(tour) {
+    const { aura } = Tours.fiche(tour);
+    return aura ? aura.portee : Tours.portee(tour);
+  },
+
+  degatsDeCanon(tour, degats) {
+    const multiplicateur = Tours.fiche(tour).degatsCanon || 1;
+    const defense = 1 + Ameliorations.BONUS_RENFORCEMENT * tour.points.renforcement;
+    return (degats * multiplicateur) / defense;
+  },
+
+  // Rend des PV, sans dépasser le maximum. L'effet visuel reste discret pour un soin continu.
+  soigner(partie, tour, pv, continu = false) {
+    tour.pv = Math.min(tour.pvMax, tour.pv + pv);
+    if (continu) {
+      tour.tempsEffetSoin += pv;
+      if (tour.tempsEffetSoin < 0.4) return;
+      tour.tempsEffetSoin = 0;
+    }
+    partie.evenements.push({ type: 'soin', tour });
   },
 
   // Le niveau découle du compteur : il monte et redescend tout seul avec les soldats.
@@ -125,9 +175,12 @@ const Tours = {
     tour.pvMax = tour.pvBase;
     tour.pv = tour.pvMax;
     tour.soldats = 0;
+    tour.typeSoldat = null;
     tour.tempsProduction = 0;
-    tour.demiPerte = false;
+    tour.perteEnCours = 0;
     tour.detteEnvoi = 0;
+    tour.tempsTir = 0;
+    tour.visee = null;
   },
 
   // Trouve la tour sous le doigt ou la souris. La zone reste assez grande pour un doigt.

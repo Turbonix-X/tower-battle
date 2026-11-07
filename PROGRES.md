@@ -2,7 +2,7 @@
 
 Ce fichier est mis à jour à chaque fois qu'une étape est finie.
 
-**Avancement : 10 / 20 étapes finies, 1 commencée**
+**Avancement : 14 / 20 étapes finies, 1 commencée**
 
 Légende : ✅ finie · 🟡 commencée · ⬜ à faire
 
@@ -21,19 +21,19 @@ Légende : ✅ finie · 🟡 commencée · ⬜ à faire
 - ✅ **8. L'argent** — or de partie, pièces, mine d'or, fichier de données des types de tours
 - ✅ **9. Les améliorations** — 6 points à répartir sur 3 statistiques, prix croissants, menu rond, apparence qui change
 - ✅ **10. Les premiers types de tours** — caserne, forteresse, campement, placés par le générateur, fiche d'info
-- ⬜ **11. Décors**
-- ⬜ **12. Obstacles**
-- ⬜ **13. Brouillard**
-- ⬜ **14. Avions**
+- ✅ **11. Les tours d'attaque** — archers et canon, cercle de portée, flèches et boulets animés, ordis qui s'en servent et les évitent
+- ✅ **12. Les tours spéciales** — piège, soin, géante, avec leurs dessins et leurs animations
+- ✅ **13. Les types de soldats** — fantassin, chevalier, coureur, éclaireur, bouclier, choix dans le menu rond, soldats détaillés et animés
+- ✅ **14. Déblocages et règles des liens** — écran de présentation, niveaux d'apprentissage, Collection, tableau des liens, Boutique de skins
+- ⬜ **15. Décors**
+- ⬜ **16. Obstacles**
+- ⬜ **17. Brouillard** — les éclaireurs le révéleront
+- ⬜ **18. Avions**
 
 ## La finition
 
-- ⬜ **15. Sons** — bruitages et musique (les réglages de volume existent déjà, mais il n'y a encore aucun son)
-- ⬜ **16. Équilibrage** — réglages de la difficulté et des étoiles avec de vraies parties
-- ⬜ **17. Derniers tests** — sur ordinateur et sur téléphone
-- ⬜ **18. À définir** — par exemple la boutique pour dépenser les pièces
-- ⬜ **19. À définir**
-- 🟡 **20. Publication** — mise en ligne sur GitHub Pages : faite. À refaire à la fin avec la version finale
+- ⬜ **19. Sons** — bruitages et musique (les réglages de volume existent déjà, mais il n'y a encore aucun son)
+- 🟡 **20. Équilibrage, derniers tests et publication** — mise en ligne sur GitHub Pages : faite. Reste : réglages avec de vraies parties, tests sur téléphone et version finale
 
 *Hors liste, fait en version 1.6 : le passage du jeu et du menu en 3D, avec ses animations.*
 

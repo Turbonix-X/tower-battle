@@ -29,6 +29,20 @@ const Modeles3D = {
       roughness: 0.82,
       metalness: 0.04,
     });
+
+    // Pour les soldats : seules les parties blanches prennent la couleur de l'équipe.
+    // La peau, l'armure et les armes gardent leur vraie couleur.
+    Modeles3D.materiauSoldat = Modeles3D.materiau.clone();
+    Modeles3D.materiauSoldat.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <color_vertex>',
+        `#include <color_vertex>
+        #if defined(USE_COLOR) && defined(USE_INSTANCING_COLOR)
+          vColor = color;
+          if (color.r > 0.99 && color.g > 0.99 && color.b > 0.99) vColor = instanceColor;
+        #endif`,
+      );
+    };
   },
 
   // --- Outils de construction ---
@@ -282,13 +296,146 @@ const Modeles3D = {
     return 30 * taille;
   },
 
+  // Une tour de guet en bois, avec des archers sur la plateforme.
+  archers(f, m) {
+    const { pierre, pierreSombre, bois, boisSombre, peau } = COULEURS_3D;
+    const c = m.points.capacite;
+    const r = 18 * (1 + 0.035 * c);
+    const h = 44 * (1 + 0.11 * c);
+    Modeles3D.cylindre(f, r + 4, r + 8, 10, 10, 0, 0, 0, pierre);
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      Modeles3D.boite(f, 4.5, h, 4.5, sx * r * 0.72, 8, sz * r * 0.72, bois);
+    }
+    Modeles3D.boite(f, r * 1.5, 2.5, 2.5, 0, h * 0.55, r * 0.72, boisSombre, 0.5);
+    Modeles3D.boite(f, r * 1.5, 2.5, 2.5, 0, h * 0.55, -r * 0.72, boisSombre, -0.5);
+    Modeles3D.boite(f, r * 2.6, 4, r * 2.6, 0, h + 7, 0, boisSombre);
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const x = Math.cos(angle) * r * 0.75;
+      const z = Math.sin(angle) * r * 0.75;
+      Modeles3D.cylindre(f, 2.3, 3, 8, 6, x, h + 11, z, m.couleur);
+      Modeles3D.boule(f, 2.3, x, h + 21, z, peau, 0);
+      Modeles3D.boite(f, 0.8, 11, 0.8, x * 1.25, h + 13, z * 1.25, pierreSombre);
+    }
+    for (const [sx, sz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      Modeles3D.boite(f, sx ? 2 : r * 2.6, 5, sz ? 2 : r * 2.6, sx * r * 1.3, h + 11, sz * r * 1.3, bois);
+    }
+    Modeles3D.cheminees(f, m.points.production, r, 10, m.fumees);
+    m.drapeau = [r * 1.2, h + 11, -r * 1.2];
+    m.hauteur = h + 42;
+    return r + 6;
+  },
+
+  // Un bastion bas, avec son canon qui pivote vers sa cible.
+  canon(f, m) {
+    const { pierre, pierreSombre, boisSombre } = COULEURS_3D;
+    const c = m.points.capacite;
+    const r = 25 * (1 + 0.035 * c);
+    const h = 20 * (1 + 0.11 * c);
+    Modeles3D.cylindre(f, r, r + 5, h, 10, 0, 0, 0, pierre);
+    Modeles3D.cylindre(f, r + 1.5, r, 4, 10, 0, h, 0, pierreSombre);
+    Modeles3D.cylindre(f, r - 6, r - 6, 1.5, 10, 0, h + 3, 0, m.couleur);
+    for (let i = 0; i < 7; i++) {
+      const angle = (i / 7) * Math.PI * 2;
+      Modeles3D.boite(f, 7, 6, 4, Math.cos(angle) * r, h + 4, Math.sin(angle) * r, pierre, -angle + Math.PI / 2);
+    }
+    // La pile de boulets, à côté du bastion.
+    for (const [x, y, z] of [[-3, 0, 0], [3, 0, 0], [0, 0, 4], [0, 4.5, 1.4]]) {
+      Modeles3D.boule(f, 3, x + r + 9, y + 3, z + 10, '#2a2a2e', 0);
+    }
+    Modeles3D.boite(f, 12, 7, 12, 0, h + 3, 0, boisSombre);
+    Modeles3D.cheminees(f, m.points.production, r, h + 3, m.fumees);
+    m.canon = [0, h + 13, 0];
+    m.hauteur = h + 32;
+    return r + 3;
+  },
+
+  // Un petit temple clair, avec un cristal vert qui tourne au-dessus.
+  soin(f, m) {
+    const { pierre, pierreSombre } = COULEURS_3D;
+    const c = m.points.capacite;
+    const r = 24 * (1 + 0.035 * c);
+    const h = 26 * (1 + 0.11 * c);
+    Modeles3D.cylindre(f, r + 3, r + 7, 5, 10, 0, 0, 0, pierreSombre);
+    Modeles3D.cylindre(f, r, r + 3, 4, 10, 0, 5, 0, pierre);
+    const colonnes = 8;
+    for (let i = 0; i < colonnes; i++) {
+      const angle = (i / colonnes) * Math.PI * 2;
+      Modeles3D.cylindre(f, 2.2, 2.7, h, 7, Math.cos(angle) * (r - 3), 9, Math.sin(angle) * (r - 3), '#f4f1e6');
+    }
+    Modeles3D.cylindre(f, r, r - 2, 4, 10, 0, h + 9, 0, pierre);
+    Modeles3D.cylindre(f, 3, r, 11, 10, 0, h + 13, 0, m.couleur);
+    Modeles3D.cylindre(f, r - 10, r - 8, h, 8, 0, 9, 0, '#d9f7e4');
+    Modeles3D.cheminees(f, m.points.production, r, 9, m.fumees);
+    m.cristal = [0, h + 37, 0];
+    m.hauteur = h + 54;
+    return r;
+  },
+
+  // Exactement une caserne... à un détail près : une petite marque rouge au-dessus de la porte.
+  piege(f, m) {
+    const rayon = Modeles3D.caserne(f, m);
+    Modeles3D.boite(f, 3.4, 1.3, 1, 0, 17, rayon + 2.5, '#d6281f', 0.6);
+    Modeles3D.boite(f, 3.4, 1.3, 1, 0, 17, rayon + 2.6, '#d6281f', -0.6);
+    return rayon;
+  },
+
+  // Une tour immense, à étages, qui domine toute la carte.
+  geante(f, m) {
+    const { pierre, pierreSombre, bois, or } = COULEURS_3D;
+    const c = m.points.capacite;
+    const r = 34 * (1 + 0.025 * c);
+    const h = 56 * (1 + 0.08 * c);
+    Modeles3D.cylindre(f, r + 4, r + 12, 12, 14, 0, 0, 0, pierreSombre);
+    Modeles3D.cylindre(f, r, r + 3, h, 14, 0, 12, 0, pierre);
+    Modeles3D.cylindre(f, r + 1, r + 1, 6, 14, 0, h * 0.55, 0, m.couleur);
+    Modeles3D.cylindre(f, r + 5, r, 7, 14, 0, h + 12, 0, pierreSombre);
+    const haut = h + 19;
+    for (let i = 0; i < 14; i++) {
+      const angle = (i / 14) * Math.PI * 2;
+      Modeles3D.boite(f, 7, 7, 4, Math.cos(angle) * (r + 3), haut, Math.sin(angle) * (r + 3), pierre, -angle + Math.PI / 2);
+    }
+    Modeles3D.cylindre(f, r * 0.62, r * 0.7, 26, 12, 0, haut, 0, pierre);
+    Modeles3D.cylindre(f, r * 0.72, r * 0.62, 4, 12, 0, haut + 26, 0, pierreSombre);
+    Modeles3D.cylindre(f, 0, r * 0.7, 26, 12, 0, haut + 30, 0, m.couleur);
+    Modeles3D.boule(f, 4, 0, haut + 58, 0, or, 0);
+    Modeles3D.boite(f, 16, 30, 5, 0, 8, r + 3, bois);
+    Modeles3D.cheminees(f, m.points.production, r, h + 12, m.fumees);
+    m.drapeau = [r * 0.7, h + 19, -r * 0.7];
+    m.hauteur = haut + 66;
+    return r + 8;
+  },
+
   // Renvoie le modèle d'une tour. Tous les modèles identiques sont partagés.
-  tour({ type, points, couleur, foncee, boss }) {
-    const cle = [type, points.renforcement, points.production, points.capacite, couleur, boss].join('|');
+  // Un skin remplace pour un moment les couleurs des matériaux, le temps de la construction.
+  tour({ type, points, couleur, foncee, boss, skin = 'classique' }) {
+    const cle = [type, points.renforcement, points.production, points.capacite, couleur, boss, skin].join('|');
     if (Modeles3D.cache.has(cle)) return Modeles3D.cache.get(cle);
 
+    const couleursNormales = { ...COULEURS_3D };
+    Object.assign(COULEURS_3D, SKINS_TOURS[skin].couleurs);
+    const modele = Modeles3D.construireTour({ type, points, couleur, foncee, boss });
+    Object.assign(COULEURS_3D, couleursNormales);
+
+    Modeles3D.cache.set(cle, modele);
+    return modele;
+  },
+
+  construireTour({ type, points, couleur, foncee, boss }) {
     const f = Modeles3D.fabrique();
-    const modele = { points, couleur, foncee, boss, fumees: [], drapeau: null, roue: null, feu: null, hauteur: 70 };
+    const modele = {
+      points,
+      couleur,
+      foncee,
+      boss,
+      fumees: [],
+      drapeau: null,
+      roue: null,
+      feu: null,
+      canon: null,
+      cristal: null,
+      hauteur: 70,
+    };
 
     // Le socle aux couleurs de l'équipe : on voit à qui est la tour, même de loin.
     Modeles3D.cylindre(f, 44, 46, 2.5, 28, 0, 0, 0, foncee);
@@ -310,19 +457,122 @@ const Modeles3D = {
     }
 
     modele.geometrie = Modeles3D.fusionner(f);
-    Modeles3D.cache.set(cle, modele);
     return modele;
   },
 
   // --- Les petites formes ---
 
-  soldat() {
+  // Le corps d'un soldat, de la taille à la tête : les jambes sont à part, pour les animer.
+  // Le blanc prend la couleur de l'équipe. "armure" est la couleur du métal (voir les skins).
+  soldat(type, armure = '#d9d9d9') {
     const f = Modeles3D.fabrique();
-    Modeles3D.cylindre(f, 3.4, 4.6, 9, 7, 0, 2.5, 0, '#ffffff');
-    Modeles3D.cylindre(f, 4.6, 5, 2.5, 7, 0, 0, 0, '#c9c9c9');
-    Modeles3D.boule(f, 3.3, 0, 14, 0, COULEURS_3D.peau, 1);
-    Modeles3D.cylindre(f, 0.2, 4.2, 4, 7, 0, 16, 0, '#ffffff');
-    Modeles3D.boite(f, 1.4, 9, 1.4, 5, 4, 1, '#d9d9d9');
+    const { peau, boisSombre, noir } = COULEURS_3D;
+    const equipe = '#ffffff';
+
+    // Ce que tout le monde a : un buste, une tête, deux bras.
+    const buste = (rayon, hauteur, couleur = equipe) => {
+      Modeles3D.cylindre(f, rayon * 0.82, rayon, hauteur, 7, 0, 0, 0, couleur);
+      Modeles3D.boule(f, 2.9, 0, hauteur + 2.6, 0, peau, 1);
+      Modeles3D.boite(f, 1.5, hauteur * 0.8, 1.5, rayon + 0.6, hauteur * 0.1, 0, couleur);
+      Modeles3D.boite(f, 1.5, hauteur * 0.8, 1.5, -rayon - 0.6, hauteur * 0.1, 0, couleur);
+      return hauteur + 2.6;
+    };
+    const casque = (y, couleur = armure) => {
+      Modeles3D.cylindre(f, 1.5, 3.4, 2.8, 8, 0, y + 0.8, 0, couleur);
+    };
+    const epee = (x, longueur = 10) => {
+      Modeles3D.boite(f, 1, longueur, 1, x, 2, 2.4, armure);
+      Modeles3D.boite(f, 3.6, 0.9, 1, x, 2, 2.4, boisSombre);
+    };
+
+    if (type === 'chevalier') {
+      // Grand et lourd : armure complète, plumet et grande épée.
+      const tete = buste(5.2, 11);
+      Modeles3D.cylindre(f, 4.6, 5.8, 7, 8, 0, 2, 0, armure);
+      Modeles3D.boite(f, 7, 2, 7, 0, 9.5, 0, armure);
+      Modeles3D.cylindre(f, 2.6, 3.8, 5, 8, 0, tete - 1, 0, armure);
+      Modeles3D.boite(f, 1.2, 5, 5, 0, tete + 3, -1, equipe);
+      Modeles3D.boite(f, 8, 12, 1, 0, 0, -5.6, equipe); // la cape
+      epee(6.4, 15);
+    } else if (type === 'coureur') {
+      // Mince et sans armure, avec un simple bandeau et une dague.
+      const tete = buste(2.9, 7.5);
+      Modeles3D.cylindre(f, 3, 3, 1.1, 8, 0, tete + 0.4, 0, equipe);
+      epee(3.9, 5);
+    } else if (type === 'bouclier') {
+      // Un grand bouclier devant lui, pour arrêter les flèches.
+      const tete = buste(3.8, 9);
+      casque(tete);
+      Modeles3D.boite(f, 10, 13, 1.5, 0, -1, 5, armure);
+      Modeles3D.boite(f, 7.5, 10, 1.7, 0, 0.5, 5.1, equipe);
+      Modeles3D.boite(f, 1.5, 10, 1.9, 0, 0.5, 5.2, armure);
+    } else if (type === 'eclaireur') {
+      // Une capuche, une longue-vue et un sac.
+      const tete = buste(3, 8);
+      Modeles3D.cylindre(f, 0.3, 3.8, 5, 7, 0, tete, -0.4, equipe);
+      Modeles3D.boite(f, 5, 6, 2.6, 0, 1.5, -3.4, boisSombre);
+      Modeles3D.boite(f, 1.3, 1.3, 6, 3.8, 7, 2.5, armure);
+    } else if (type === 'soigneur') {
+      // Une robe claire et un bâton surmonté d'une croix verte.
+      buste(3.6, 9);
+      Modeles3D.cylindre(f, 3.6, 5, 6, 8, 0, -4, 0, '#f6f6ec');
+      Modeles3D.boite(f, 1, 16, 1, 5, -2, 1.5, boisSombre);
+      Modeles3D.boite(f, 4.4, 1.4, 1.4, 5, 12, 1.5, '#3fe07d');
+      Modeles3D.boite(f, 1.4, 4.4, 1.4, 5, 10.5, 1.5, '#3fe07d');
+    } else {
+      // Le fantassin : casque, épée et petit bouclier rond.
+      const tete = buste(3.7, 9);
+      casque(tete);
+      epee(4.7);
+      Modeles3D.cylindre(f, 3, 3, 1.1, 8, -4.8, 3, 2, noir);
+      const rond = new THREE.CylinderGeometry(3.1, 3.1, 1, 9);
+      rond.rotateX(Math.PI / 2);
+      Modeles3D.poser(f, rond, armure, -4.8, 5, 2);
+    }
+    return Modeles3D.fusionner(f);
+  },
+
+  // Une jambe, accrochée par le haut : c'est ce point qui reste fixe quand elle se balance.
+  jambe() {
+    const f = Modeles3D.fabrique();
+    const haut = new THREE.BoxGeometry(2.1, 5.2, 2.3);
+    haut.translate(0, -2.6, 0);
+    Modeles3D.poser(f, haut, '#4b4b4b');
+    const pied = new THREE.BoxGeometry(2.3, 1.2, 3.4);
+    pied.translate(0, -4.8, 0.7);
+    Modeles3D.poser(f, pied, COULEURS_3D.noir);
+    return Modeles3D.fusionner(f);
+  },
+
+  fleche() {
+    const f = Modeles3D.fabrique();
+    const tige = new THREE.CylinderGeometry(0.45, 0.45, 15, 5);
+    tige.rotateX(Math.PI / 2);
+    Modeles3D.poser(f, tige, COULEURS_3D.bois);
+    const pointe = new THREE.ConeGeometry(1.1, 3.5, 5);
+    pointe.rotateX(Math.PI / 2);
+    Modeles3D.poser(f, pointe, '#e8e8e8', 0, 0, 9);
+    Modeles3D.boite(f, 3, 0.3, 3, 0, 0, -7, '#f2f2f2');
+    Modeles3D.boite(f, 0.3, 3, 3, 0, -1.5, -7, '#f2f2f2');
+    return Modeles3D.fusionner(f);
+  },
+
+  boulet() {
+    const f = Modeles3D.fabrique();
+    Modeles3D.boule(f, 5.5, 0, 0, 0, '#2a2a2e', 1);
+    return Modeles3D.fusionner(f);
+  },
+
+  // Le fût du canon, pointé vers l'avant. Il tourne vers sa cible.
+  futDeCanon() {
+    const f = Modeles3D.fabrique();
+    const fut = new THREE.CylinderGeometry(4, 5.2, 28, 10);
+    fut.rotateX(Math.PI / 2);
+    Modeles3D.poser(f, fut, '#33353b', 0, 0, 9);
+    const bouche = new THREE.CylinderGeometry(5, 5, 3.5, 10);
+    bouche.rotateX(Math.PI / 2);
+    Modeles3D.poser(f, bouche, '#1d1e22', 0, 0, 23);
+    Modeles3D.boule(f, 6, 0, 0, -6, '#3d3f46', 0);
     return Modeles3D.fusionner(f);
   },
 

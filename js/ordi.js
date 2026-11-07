@@ -40,6 +40,10 @@ const Ordi = {
   CHANCE_OUBLI_LIGNE: 0.3, // un ordi faible finit par couper une ligne au hasard
   POIDS_DISTANCE: 0.05, // combien la distance compte dans le choix d'une cible
   PENALITE_DEJA_VISEE: 20,
+  FORCE_REPERE_PIEGES: 6, // à partir de cette force, l'ordi évite les tours pièges
+  ATTRAIT_TOUR_QUI_TIRE: 80, // une tour neutre qui tire compte comme si elle était plus proche
+  PRIORITE_TOUR_QUI_TIRE: 12,
+  BONUS_SOUS_CANONS: 10,
   // Le joueur est seul face à plusieurs ordis : ils lui laissent le temps de s'installer,
   // se méfient davantage de lui, et préfèrent s'attaquer entre eux.
   SECONDES_DE_GRACE: 20,
@@ -128,6 +132,8 @@ const Ordi = {
   jouerNormal(partie, ordi) {
     Ordi.nettoyerLignes(partie, ordi);
     Ordi.ameliorer(partie, ordi);
+    Ordi.choisirSoldats(partie, ordi);
+    Ordi.soignerSesTours(partie, ordi);
     const { personnalite } = ordi;
     for (let i = 0; i < Ordi.actionsParTour(ordi.force); i++) {
       const defend = Math.random() < personnalite.envieDeDefendre && Ordi.defendre(partie, ordi);
@@ -184,6 +190,51 @@ const Ordi = {
 
   // Les ordis moyens et forts dépensent leur or pour améliorer leur tour la mieux remplie,
   // chacun selon son style.
+  choisirSoldats(partie, ordi) {
+    const archersEnnemis = partie.tours.some(
+      (t) => t.equipe !== ordi.equipe && t.equipe !== 'neutre' && t.type === 'archers',
+    );
+    for (const tour of Ordi.sesTours(partie, ordi)) {
+      const types = Tours.typesDeSoldats(tour, partie.numero).filter((t) => TYPES_DE_SOLDATS[t].combat);
+      if (types.length < 2) continue;
+      if (archersEnnemis && types.includes('bouclier')) tour.typeSoldat = 'bouclier';
+      else if (Ordi.estFort(ordi) && types.includes('chevalier')) tour.typeSoldat = 'chevalier';
+      else if (types.includes('coureur')) tour.typeSoldat = 'coureur';
+      else tour.typeSoldat = types[0];
+    }
+  },
+
+  // Une tour soin relie la tour la plus abîmée à sa portée, si elle ne le fait pas déjà.
+  soignerSesTours(partie, ordi) {
+    const abimees = Ordi.sesTours(partie, ordi)
+      .filter((t) => t.pv < t.pvMax * 0.8)
+      .sort((a, b) => a.pv / a.pvMax - b.pv / b.pvMax);
+    for (const soin of Ordi.sesTours(partie, ordi)) {
+      if (!Tours.fiche(soin).aura) continue;
+      const cible = abimees.find((t) => t !== soin);
+      if (cible) Lignes.ajouter(partie, soin, cible);
+    }
+  },
+
+  // Combien de soldats perdus sous les flèches ennemies sur le chemin de "depart" à "cible".
+  dangerDeLaRoute(partie, ordi, depart, cible) {
+    let danger = 0;
+    const dx = cible.x - depart.x;
+    const dy = cible.y - depart.y;
+    const longueur = Math.hypot(dx, dy) || 1;
+    for (const tour of partie.tours) {
+      if (tour.type !== 'archers' || tour.equipe === ordi.equipe || tour.equipe === 'neutre') continue;
+      const portee = Tours.portee(tour);
+      const t = Math.max(0, Math.min(1, ((tour.x - depart.x) * dx + (tour.y - depart.y) * dy) / (longueur * longueur)));
+      const ecart = Math.hypot(depart.x + dx * t - tour.x, depart.y + dy * t - tour.y);
+      if (ecart < portee) {
+        const parcoursSousLesFleches = 2 * Math.sqrt(portee * portee - ecart * ecart);
+        danger += parcoursSousLesFleches / Soldats.VITESSE / Tours.fiche(tour).tir.secondes;
+      }
+    }
+    return danger;
+  },
+
   ameliorer(partie, ordi) {
     if (Ordi.estFaible(ordi)) return;
     const tour = Ordi.sesTours(partie, ordi)
@@ -210,6 +261,7 @@ const Ordi = {
 
       // Un renfort ne sert que si la tour aidée est attaquée.
       if (arrivee.equipe === ordi.equipe) {
+        if (Tours.fiche(depart).aura) return arrivee.pv < arrivee.pvMax; // un soin, tant qu'il sert
         return Ordi.assaillants(partie, ordi, arrivee).length > 0;
       }
 
@@ -268,28 +320,28 @@ const Ordi = {
   riposter(partie, ordi, tour, attaquant) {
     if (attaquant.equipe === ordi.equipe) return false;
     if (tour.soldats < Ordi.SOLDATS_POUR_RIPOSTER) return false;
-    if (!Lignes.peutPartirDe(partie, tour)) return false;
-    Lignes.ajouter(partie, tour, attaquant);
-    return true;
+    return Lignes.ajouter(partie, tour, attaquant);
   },
 
   appelerRenforts(partie, ordi, tour) {
     const aide = Ordi.sesTours(partie, ordi)
       .filter((t) => t !== tour && t.soldats >= Ordi.SOLDATS_POUR_AIDER)
-      .filter((t) => Lignes.peutPartirDe(partie, t))
+      .filter((t) => Lignes.peutRelier(partie, t, tour))
       .sort((a, b) => Ordi.distance(a, tour) - Ordi.distance(b, tour))[0];
-    if (!aide) return false;
-    Lignes.ajouter(partie, aide, tour);
-    return true;
+    return aide ? Lignes.ajouter(partie, aide, tour) : false;
   },
 
   // Les tours neutres les plus proches d'abord.
   capturer(partie, ordi) {
     const proximite = (cible) =>
       Math.min(...Ordi.sesTours(partie, ordi).map((tour) => Ordi.distance(tour, cible)));
+    // Un ordi assez fort repère les pièges, et préfère prendre les tours qui tirent.
+    const repereLesPieges = ordi.force >= Ordi.FORCE_REPERE_PIEGES;
+    const attrait = (cible) => proximite(cible) - (Tours.fiche(cible).tir ? Ordi.ATTRAIT_TOUR_QUI_TIRE : 0);
     const neutres = partie.tours
       .filter((tour) => tour.equipe === 'neutre')
-      .sort((a, b) => proximite(a) - proximite(b));
+      .filter((tour) => !(repereLesPieges && tour.type === 'piege'))
+      .sort((a, b) => attrait(a) - attrait(b));
     return Ordi.lancerSurPremiere(partie, ordi, neutres);
   },
 
@@ -320,6 +372,18 @@ const Ordi = {
 
     if (tour.equipe === EQUIPE_JOUEUR) score += Ordi.PENALITE_JOUEUR;
 
+    // Les tours qui tirent sont les plus gênantes : mieux vaut s'en débarrasser.
+    if (Tours.fiche(tour).tir) score -= Ordi.PRIORITE_TOUR_QUI_TIRE;
+
+    // Et une cible déjà sous les boulets de ses propres canons est plus facile à finir.
+    const sousSesCanons = partie.tours.some(
+      (t) =>
+        t.equipe === ordi.equipe &&
+        t.type === 'canon' &&
+        Ordi.distance(t, tour) <= Tours.portee(t),
+    );
+    if (sousSesCanons) score -= Ordi.BONUS_SOUS_CANONS;
+
     // Un ordi fort repère les tours qui se vident parce qu'elles envoient des soldats.
     if (Ordi.estFort(ordi)) {
       const lignes = partie.lignes.filter((l) => l.depart === tour).length;
@@ -349,7 +413,7 @@ const Ordi = {
     if (dejaVisee) return false;
 
     const sources = Ordi.sesTours(partie, ordi)
-      .filter((tour) => Lignes.peutPartirDe(partie, tour))
+      .filter((tour) => Lignes.peutRelier(partie, tour, cible))
       .sort((a, b) => Ordi.distance(a, cible) - Ordi.distance(b, cible));
 
     let marge = ordi.personnalite.margeAttaque * (Ordi.estFort(ordi) ? 1.2 : 1);
@@ -366,7 +430,9 @@ const Ordi = {
       groupe.push(source);
       pouvoir += Ordi.pouvoir(source);
       niveauGroupe = Math.min(niveauGroupe, Tours.niveau(source));
-      const cout = Ordi.coutCapture(cible, niveauGroupe, Ordi.distance(source, cible));
+      // Un ordi moyen ou fort compte aussi les soldats qu'il perdra sous les flèches en chemin.
+      const danger = Ordi.estFaible(ordi) ? 0 : Ordi.dangerDeLaRoute(partie, ordi, source, cible);
+      const cout = Ordi.coutCapture(cible, niveauGroupe, Ordi.distance(source, cible)) + danger;
       if (pouvoir >= cout * marge && groupe.length >= coteMin) {
         for (const tour of groupe) Lignes.ajouter(partie, tour, cible);
         return true;

@@ -384,6 +384,7 @@ button[hidden] {
 .ecran-defilant {
   justify-content: flex-start;
   overflow-y: auto;
+  padding-top: 36px; /* la place du numéro de version */
 }
 
 .ecran h1,
@@ -472,10 +473,15 @@ button[hidden] {
 }
 
 .boutons-titre {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: min(290px, 80vw);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: min(380px, 88vw);
+}
+
+.boutons-titre .bouton-principal,
+#bouton-credits {
+  grid-column: 1 / -1;
 }
 
 .boutons-titre button {
@@ -511,6 +517,8 @@ button[hidden] {
 .boutons-titre button:nth-child(2) { animation-delay: 0.55s; }
 .boutons-titre button:nth-child(3) { animation-delay: 0.65s; }
 .boutons-titre button:nth-child(4) { animation-delay: 0.75s; }
+.boutons-titre button:nth-child(5) { animation-delay: 0.85s; }
+.boutons-titre button:nth-child(6) { animation-delay: 0.95s; }
 
 @keyframes bouton-arrivee {
   from {
@@ -802,6 +810,256 @@ button[hidden] {
 .noeud-boss .noeud-numero::before {
   content: '♛ ';
   color: var(--or);
+}
+
+/* --- Le choix du soldat, sous le menu rond --- */
+
+#roue-soldats::after {
+  content: attr(data-nom);
+  position: absolute;
+  left: 50%;
+  top: 44px;
+  transform: translateX(-50%);
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(10, 24, 30, 0.9);
+  color: var(--or);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+#roue-soldats[data-nom='']::after {
+  display: none;
+}
+
+#roue-soldats {
+  position: absolute;
+  left: 0;
+  top: 108px;
+  display: flex;
+  gap: 6px;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+#roue.visible #roue-soldats {
+  opacity: 1;
+}
+
+.choix-soldat {
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  background: rgba(10, 24, 30, 0.94);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.choix-soldat.actif {
+  border-color: var(--or);
+  background: rgba(70, 58, 14, 0.96);
+  box-shadow: 0 0 10px rgba(255, 216, 77, 0.7);
+}
+
+/* --- La collection et la boutique --- */
+
+.panneau-large {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(900px, 100%);
+  text-align: left;
+}
+
+.panneau-large h3 {
+  margin: 8px 0 0;
+  font-size: 18px;
+}
+
+.panneau-large .choix {
+  align-items: center;
+}
+
+.panneau-large .choix button {
+  flex: 0 1 140px;
+}
+
+#compte-collection {
+  margin-left: auto;
+  color: var(--or);
+  font-weight: 800;
+}
+
+.bloc-pieces-petit {
+  padding: 4px 12px;
+  border: 1px solid rgba(255, 216, 77, 0.6);
+  border-radius: 999px;
+  background: var(--panneau);
+  color: var(--or);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.grille-cartes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.carte-type,
+.carte-skin {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--contour);
+  border-radius: 12px;
+  background: var(--panneau);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.carte-type:hover,
+.carte-skin:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 216, 77, 0.6);
+}
+
+.carte-type img,
+.carte-skin img {
+  align-self: center;
+  width: 120px;
+  height: 120px;
+}
+
+.carte-type h3,
+.carte-skin h3 {
+  margin: 0;
+  font-size: 16px;
+  text-align: center;
+  color: var(--or);
+}
+
+.carte-type p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.carte-type dl {
+  margin: 4px 0 0;
+}
+
+.carte-type dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.carte-type dt {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.carte-type dd {
+  margin: 0;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.carte-verrouillee img {
+  filter: grayscale(1) brightness(0.45);
+}
+
+.carte-verrouillee h3 {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.cadenas {
+  text-align: center;
+  font-weight: 800;
+  font-size: 14px !important;
+}
+
+.carte-equipee {
+  border-color: var(--or);
+  box-shadow: 0 0 14px rgba(255, 216, 77, 0.35);
+}
+
+/* --- La présentation d'un nouveau type --- */
+
+.rayons {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 180vmax;
+  height: 180vmax;
+  margin: -90vmax 0 0 -90vmax;
+  background: repeating-conic-gradient(rgba(255, 216, 77, 0.13) 0deg 12deg, transparent 12deg 24deg);
+  animation: rayons-tournent 24s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rayons-tournent {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.panneau-deblocage {
+  position: relative;
+  align-items: center;
+  gap: 8px;
+  width: min(400px, 100%);
+  border-color: var(--or);
+}
+
+.panneau-deblocage.arrivee {
+  animation: deblocage-arrivee 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) backwards;
+}
+
+@keyframes deblocage-arrivee {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-6deg);
+  }
+}
+
+#deblocage-genre {
+  color: var(--or);
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#vignette-3d {
+  width: 210px;
+  height: 210px;
+}
+
+#deblocage-description {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+#deblocage-apprendre {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+#deblocage-continuer {
+  align-self: stretch;
+  margin-top: 6px;
 }
 
 /* --- Si la 3D n'est pas disponible --- */

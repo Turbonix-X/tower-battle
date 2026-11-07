@@ -52,7 +52,7 @@ Ce nombre de lignes est rangé par type de tour, car il changera plus tard selon
 
 - Le joueur trace une ligne en glissant de sa tour vers une autre tour, à la souris ou au doigt.
 - Des petits soldats partent en file le long de la ligne, environ **2 par seconde**.
-- **Attaquer coûte moins que ce qu'on gagne :** chaque soldat envoyé sur un adversaire ne coûte que 0,4 à la tour de départ. Avec une ligne, elle perd 0,8 par seconde et en gagne 1 : son compteur continue de monter.
+- **Attaquer coûte moins que ce qu'on gagne :** un fantassin envoyé sur un adversaire ne coûte que 0,4 à la tour de départ (ce coût dépend du type de soldat). Avec une ligne, une caserne perd 0,8 par seconde et en gagne 1 : son compteur continue de monter.
 - **Un renfort coûte un soldat entier :** entre deux tours d'une même équipe, chaque envoi retire 1, sinon on pourrait fabriquer des soldats à l'infini.
 
 ### Arrêter une ligne
@@ -63,7 +63,7 @@ Ce nombre de lignes est rangé par type de tour, car il changera plus tard selon
 ### Combats sur une ligne
 
 - Si deux tours ennemies s'envoient des soldats l'une vers l'autre, les soldats se rencontrent sur la ligne et se battent 1 contre 1, avec une petite animation de combat.
-- Au combat, les soldats d'une tour de niveau plus élevé que l'adversaire **comptent double**.
+- Au combat, les soldats d'une tour de niveau plus élevé que l'adversaire **comptent double**, en plus de la force de leur type (voir « Types de soldats »).
 
 ### Arrivée d'un soldat
 
@@ -81,7 +81,7 @@ Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
 
 - **Lieu de la rencontre :** les soldats se battent là où ils se croisent. C'est le milieu de la ligne si les deux tours commencent en même temps, sinon plus près de la tour qui a commencé en dernier.
 - **Niveau d'un soldat :** il garde le niveau qu'avait sa tour au moment de son départ.
-- **« Compter double » sur une ligne :** le soldat le plus fort survit à son premier combat et tue son adversaire. Au combat suivant, il compte pour un seul soldat.
+- **Un combat sur une ligne :** chacun vaut sa force, doublée s'il vient d'une tour de niveau plus élevé. Le plus fort survit avec ce qu'il lui reste. Par exemple, un chevalier (2) qui bat un fantassin (1) continue avec une force de 1.
 - **« Compter double » à l'arrivée :** un attaquant plus fort tue 2 défenseurs. Si la tour est plus forte, il faut 2 attaquants pour tuer 1 défenseur.
 - **PV :** un soldat retire toujours 1 PV, même s'il compte double. Un soldat qui tue le dernier défenseur ne retire pas de PV en plus.
 - **Trop de lignes :** si le niveau baisse, les lignes en trop du joueur (les plus récentes) se mettent en pause et s'affichent plus pâles. Elles repartent si le niveau remonte. Celles d'un ordi disparaissent tout de suite, pour qu'il ne dépasse jamais sa limite.
@@ -145,14 +145,42 @@ Les équipes supplémentaires ne sont présentes que dans certaines parties.
 
 Toutes les valeurs sont rangées dans `js/donnees-tours.js` : pour ajouter un type, il suffit d'y ajouter une fiche.
 
-| Type | Soldats par seconde | Soldats ennemis pour retirer des PV | Capacité | PV de départ | Particularité |
-|------|---------------------|-------------------------------------|----------|--------------|---------------|
-| **Caserne** | 1 | 1 soldat = 1 PV | 50 | ×1 | La tour de base |
-| **Forteresse** | 0,5 | 2 soldats = 1 PV | 70 | ×1,5 | Très résistante |
-| **Campement** | 1 | 1 soldat = 2 PV | 35 | ×0,8 | Ses soldats marchent 2 fois plus vite |
-| **Mine d'or** | 0 | 1 soldat = 1 PV | 20 | ×0,8 | N'attaque pas, produit 1 or par seconde |
+| Type | Débloqué au niveau | Soldats par seconde | Soldats ennemis pour retirer des PV | Capacité | Lignes (niveaux 1, 2, 3) | Soldats produits |
+|------|------|------|------|------|------|------|
+| **Caserne** | 1 | 1 | 1 soldat = 1 PV | 50 | 1, 2, 3 | Fantassin, bouclier |
+| **Mine d'or** | 10 | 0 | 1 soldat = 1 PV | 20 | 0 | Aucun |
+| **Forteresse** | 15 | 0,5 | 2 soldats = 1 PV | 70 | 1, 2, 3 | Chevalier, fantassin |
+| **Campement** | 25 | 1 | 1 soldat = 2 PV | 35 | 1, 2, 3 | Coureur, éclaireur |
+| **Archers** | 30 | 0,4 | 1 soldat = 1 PV | 40 | 1, 2, 2 | Fantassin |
+| **Canon** | 45 | 0,4 | 1 soldat = 1 PV | 40 | 1, 2, 2 | Fantassin |
+| **Soin** | 60 | 0,6 | 1 soldat = 1 PV | 30 | 4, 4, 4 | Soigneur |
+| **Piège** | 75 | (comme une caserne) | 1 soldat = 1 PV | 50 | 1, 2, 3 | Fantassin |
+| **Géante** | 120 | 1,5 | 1 soldat = 1 PV | 250 | 2, 3, 4 | Tous sauf le soigneur |
 
-Chaque type a son propre dessin 3D. Le générateur place les types de plus en plus variés au fil des niveaux : mines à partir du niveau 12, forteresses à partir du 15, campements à partir du 25, et types spéciaux chez les ennemis à partir du 80. Le joueur démarre toujours avec une caserne.
+### Les tours d'attaque
+
+- **Archers :** tirent des flèches sur les soldats ennemis dans leur cercle de portée, même s'ils attaquent une autre tour. Elles n'attaquent pas les tours. Portée de 170, 220 ou 270 selon le niveau, 1 flèche par seconde.
+- **Canon :** tire des boulets en arc sur les tours ennemies à portée (230, 290 ou 350) et leur retire 2 PV toutes les 3,2 secondes. Il n'attaque pas les soldats.
+- Le cercle de portée s'affiche quand on sélectionne la tour (menu rond ou fiche d'info).
+
+### Les tours spéciales
+
+- **Piège :** ressemble à une caserne neutre, même dans sa fiche d'info. Une petite marque rouge au-dessus de la porte permet de la repérer. Quand un soldat qui combat arrive dessus, elle explose et détruit jusqu'à 8 soldats qui arrivent, puis devient une caserne neutre normale.
+- **Soin :** soigne toutes les tours alliées dans sa portée (210), à 0,5 PV par seconde. Elle peut être reliée à 4 tours alliées : ses lignes envoient des soigneurs, qui rendent 1,5 PV au lieu d'attaquer. Ses lignes sont vertes.
+- **Géante :** capacité énorme et presque tous les soldats, mais elle prend double dégât des canons. Rare : au plus une par carte, à peu près une carte sur dix.
+
+### Sur les cartes
+
+Le générateur place ces types de plus en plus souvent au fil des niveaux, seulement une fois débloqués. Les ennemis ne commencent avec des types variés qu'à partir du niveau 80. Le joueur démarre toujours avec une caserne.
+
+### Précisions choisies pendant le développement
+
+Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
+
+- **Tours neutres :** une tour d'archers ou un canon neutre ne tire pas. Il faut d'abord le capturer. Le canon ne vise pas non plus les tours neutres.
+- **Limite du canon :** un boulet ne peut pas achever une tour : il s'arrête à 1 PV. Il faut des soldats pour la capturer, sinon elle changerait de camp avec ses défenseurs encore dedans.
+- **Renforcement :** il réduit aussi les dégâts des boulets.
+- **Éclaireurs et soigneurs :** ils ne déclenchent pas un piège.
 
 ## 6. Améliorations
 
@@ -190,7 +218,7 @@ Il y a deux sortes d'argent.
 ### Les pièces
 
 - Gagnées à la fin de chaque niveau gagné : 10 pièces par étoile, le double sur un boss.
-- Sauvegardées, elles servent à débloquer des choses dans le menu. **Il n'y a encore rien à débloquer : la boutique reste à définir.**
+- Sauvegardées, elles se dépensent dans la Boutique du menu.
 
 ## 8. Décors
 
@@ -274,3 +302,64 @@ Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
 - **Couper ses lignes :** il coupe une ligne quand assez de soldats sont partis, ou quand l'attaque ne peut plus réussir.
 - **Effet de la force :** plus elle est haute, plus il fait d'actions par tour (1 à force 3, 3 à force 10). Plus elle est basse, plus il prend parfois son deuxième meilleur choix.
 - **Pour laisser sa chance au joueur :** les ordis ne l'attaquent pas pendant les 20 premières secondes (sauf pour riposter), se méfient davantage de lui, préfèrent leurs voisins et évitent une tour déjà visée par une autre équipe.
+
+### Comment les ordis utilisent les nouveautés
+
+- **Tours qui tirent :** ils préfèrent capturer les tours neutres qui tirent et s'en prennent en priorité aux tours ennemies qui tirent.
+- **Éviter les archers :** les ordis moyens et forts comptent les soldats qu'ils perdront sous les flèches sur le chemin, et peuvent renoncer à une attaque.
+- **Canons :** ils préfèrent attaquer une cible déjà sous leurs propres canons.
+- **Pièges :** à partir de la force 6, ils repèrent les pièges et les évitent. Les plus faibles tombent dedans.
+- **Soin :** leurs tours soin relient leur tour la plus abîmée.
+- **Soldats :** ils choisissent des boucliers contre les archers, des chevaliers quand ils sont forts, et des coureurs s'ils le peuvent.
+
+## 14. Types de soldats
+
+Toutes les valeurs sont rangées dans `js/donnees-soldats.js`. Les soldats sont dessinés en détail et animés : ils marchent, se penchent pour frapper et tombent à la renverse.
+
+| Type | Débloqué au niveau | Vitesse | Force au combat | PV retirés | Flèches encaissées | Coût d'envoi |
+|------|------|------|------|------|------|------|
+| **Fantassin** | 1 | ×1 | 1 | 1 | 1 | ×1 |
+| **Chevalier** | 15 | ×0,6 | 2 | 2 | 2 | ×2 |
+| **Coureur** | 25 | ×1,6 | 0,5 | 1 | 1 | ×0,6 |
+| **Bouclier** | 35 | ×0,8 | 1 | 1 | 5 | ×1,5 |
+| **Éclaireur** | 52 | ×1,8 | Ne combat pas | 0 | 1 | ×0,5 |
+| **Soigneur** | 60 | ×1 | Ne combat pas | 0 (rend 1,5 PV) | 1 | ×1 |
+
+- Chaque type de tour ne peut produire que certains soldats (voir le tableau des tours).
+- Quand une tour peut en produire plusieurs, je choisis lequel dans son menu rond.
+- L'éclaireur servira à révéler le brouillard. Pour l'instant, il traverse les combats et disparaît en arrivant chez l'ennemi.
+
+### Précisions choisies pendant le développement
+
+- **Compteur de la tour :** il reste un simple nombre, sans types. C'est le choix au moment de l'envoi qui décide du soldat qui part.
+- **Coût d'envoi :** il ne compte que pour les attaques. Un renfort coûte toujours un soldat entier et ajoute 1 au compteur.
+- **Le soigneur :** c'est un sixième type, ajouté pour montrer ce que la tour soin envoie dans ses lignes.
+
+## 15. Déblocages et collection
+
+- Les types de tours et de soldats apparaissent au fil des niveaux. Avant leur niveau de déblocage, ils ne sont sur aucune carte.
+- Quand une victoire débloque un type, un écran le présente, avec le modèle 3D qui tourne, puis l'écran de fin s'affiche.
+- Le niveau suivant sert à l'apprendre : le joueur reçoit une tour de ce type (ou une tour neutre juste à côté pour la mine et le piège), et un conseil explique à quoi elle sert.
+- **Collection :** un écran du menu avec tous les types de tours et de soldats, leurs statistiques, et un cadenas sur ceux pas encore débloqués.
+- Une sauvegarde plus ancienne ne présente que les nouveautés à venir, pas tout ce qui est déjà accessible.
+
+## 16. Règles des liens
+
+Le nombre de lignes dépend des deux tours reliées :
+
+- **Ce qu'une tour peut envoyer :** dans `js/donnees-tours.js` (lignes par niveau).
+- **Ce qu'une tour peut recevoir :** dans le tableau de `js/donnees-liens.js`, selon le type qui envoie et le type qui reçoit. Par exemple, une forteresse ne reçoit qu'une ligne de soin à la fois, une tour normale deux, une tour géante quatre.
+
+Une ligne impossible n'est pas créée, et les pointillés du tracé deviennent rouges. Ces limites comptent les lignes d'une même équipe, venant de tours d'un même type.
+
+## 17. Boutique
+
+Un écran du menu pour dépenser ses pièces en skins. Ils ne changent que l'apparence, et seulement pour les tours et soldats du joueur. Tout est rangé dans `js/donnees-skins.js`.
+
+| Skins de tours | Prix | | Skins de soldats | Prix |
+|------|------|---|------|------|
+| Classique | Gratuit | | Classique | Gratuit |
+| Sable | 150 | | Bronze | 120 |
+| Ombre | 300 | | Ombre | 280 |
+| Glace | 500 | | Doré | 700 |
+| Royal | 900 | | | |

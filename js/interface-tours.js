@@ -8,6 +8,7 @@ const InterfaceTours = {
   RAYON_ROUE_PETIT: 72,
   MARGE_BORD_PETIT: 50,
   DELAI_FICHE: 450, // en millisecondes
+  PLACE_CHOIX_SOLDATS: 40, // la place à garder sous le menu rond pour le choix du soldat
   ANGLES: { renforcement: -90, production: 150, capacite: 30 },
   ICONES: { renforcement: '🛡️', production: '⚙️', capacite: '📦' },
 
@@ -43,6 +44,50 @@ const InterfaceTours = {
       });
       InterfaceTours.roue.append(bouton);
       InterfaceTours.boutons[statistique] = bouton;
+    }
+
+    InterfaceTours.choixSoldats = document.createElement('div');
+    InterfaceTours.choixSoldats.id = 'roue-soldats';
+    InterfaceTours.roue.append(InterfaceTours.choixSoldats);
+  },
+
+  // La tour dont on affiche la portée.
+  tourSelectionnee() {
+    return InterfaceTours.tourRoue || InterfaceTours.tourFiche;
+  },
+
+  // Sous le menu rond : le choix du soldat, quand la tour peut en produire plusieurs.
+  placerChoixSoldats(partie, tour) {
+    const types = Tours.typesDeSoldats(tour, partie.numero);
+    const zone = InterfaceTours.choixSoldats;
+    const cle = types.length > 1 ? types.join('|') : '';
+    if (InterfaceTours.cleChoix !== cle) {
+      InterfaceTours.cleChoix = cle;
+      zone.replaceChildren();
+      for (const type of cle ? types : []) {
+        const bouton = document.createElement('button');
+        bouton.type = 'button';
+        bouton.className = 'choix-soldat';
+        bouton.dataset.type = type;
+        bouton.textContent = TYPES_DE_SOLDATS[type].icone;
+        bouton.addEventListener('click', () => {
+          if (InterfaceTours.tourRoue) InterfaceTours.tourRoue.typeSoldat = type;
+        });
+        zone.append(bouton);
+      }
+    }
+    const actif = Tours.typeDeSoldatActif(partie, tour);
+    zone.dataset.nom = cle && actif ? Textes.t(TYPES_DE_SOLDATS[actif].nom) : '';
+    for (const bouton of zone.children) {
+      const type = bouton.dataset.type;
+      const estActif = type === actif;
+      bouton.classList.toggle('actif', estActif);
+      bouton.setAttribute('aria-pressed', estActif);
+      const nom = Textes.t(TYPES_DE_SOLDATS[type].nom);
+      if (bouton.title !== nom) {
+        bouton.title = nom;
+        bouton.setAttribute('aria-label', nom);
+      }
     }
   },
 
@@ -82,8 +127,10 @@ const InterfaceTours = {
     const marge = petitEcran ? InterfaceTours.MARGE_BORD_PETIT : InterfaceTours.MARGE_BORD;
     const rayon = petitEcran ? InterfaceTours.RAYON_ROUE_PETIT : InterfaceTours.RAYON_ROUE;
     const dehors = rayon + marge;
+    InterfaceTours.placerChoixSoldats(partie, tour);
+    const placeChoix = InterfaceTours.choixSoldats.children.length > 0 ? InterfaceTours.PLACE_CHOIX_SOLDATS : 0;
     const cx = Math.min(vue.largeurEcran - dehors, Math.max(dehors, centre.x));
-    const cy = Math.min(vue.hauteurEcran - dehors, Math.max(dehors, centre.y));
+    const cy = Math.min(vue.hauteurEcran - dehors - placeChoix, Math.max(dehors, centre.y));
 
     const zone = document.getElementById('zone-jeu').getBoundingClientRect();
     const roue = InterfaceTours.roue;
@@ -174,8 +221,11 @@ const InterfaceTours = {
   },
 
   remplirFiche(tour) {
-    const fiche = Tours.fiche(tour);
+    // Pour un piège, on affiche ce qu'il fait semblant d'être.
+    const fiche = Tours.ficheVisible(tour);
+    const partie = InterfaceTours.obtenirPartie();
     const nombre = (valeur) => String(Math.round(valeur * 100) / 100);
+    const typeSoldat = partie ? Tours.typeDeSoldatActif(partie, tour) : null;
     const lignes = [
       ['ficheSoldats', `${tour.soldats} / ${Tours.capacite(tour)}`],
       ['fichePv', `${Math.ceil(tour.pv)} / ${tour.pvMax}`],
@@ -186,6 +236,8 @@ const InterfaceTours = {
       ['ficheLignes', String(Tours.lignesMax(tour))],
       ['fichePoints', `${Ameliorations.pointsUtilises(tour)} / ${Ameliorations.POINTS_MAX}`],
     ];
+    if (Tours.fiche(tour).tir) lignes.push(['fichePortee', String(Tours.portee(tour))]);
+    if (typeSoldat) lignes.push(['ficheTypeSoldat', Textes.t(TYPES_DE_SOLDATS[typeSoldat].nom)]);
 
     const titre = Textes.t(fiche.nom);
     const description = Textes.t(fiche.description);

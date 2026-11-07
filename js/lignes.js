@@ -18,11 +18,25 @@ const Lignes = {
     return tour.soldats > 0 && lignes < Tours.lignesMax(tour);
   },
 
+  // La ligne dépend des deux tours : celle qui envoie, et celle qui reçoit (voir donnees-liens.js).
+  peutRelier(partie, depart, arrivee) {
+    if (!Lignes.peutPartirDe(partie, depart)) return false;
+    if (depart === arrivee) return false;
+    if (Tours.fiche(depart).aura && arrivee.equipe !== depart.equipe) return false; // on ne soigne que ses alliés
+
+    const recues = partie.lignes.filter(
+      (l) =>
+        l.arrivee === arrivee && l.depart.equipe === depart.equipe && l.depart.type === depart.type,
+    ).length;
+    return recues < receptionsMax(depart.type, arrivee.type);
+  },
+
+  // Renvoie true si la ligne a bien été créée.
   ajouter(partie, depart, arrivee) {
-    if (depart === arrivee) return;
-    if (partie.lignes.some((l) => l.depart === depart && l.arrivee === arrivee)) return;
-    if (!Lignes.peutPartirDe(partie, depart)) return;
+    if (partie.lignes.some((l) => l.depart === depart && l.arrivee === arrivee)) return false;
+    if (!Lignes.peutRelier(partie, depart, arrivee)) return false;
     partie.lignes.push({ depart, arrivee, attente: 0, enPause: false });
+    return true;
   },
 
   // Une tour qui change d'équipe ne continue pas les envois de son ancienne équipe.
@@ -41,22 +55,29 @@ const Lignes = {
 
       ligne.attente = Math.max(0, ligne.attente - dt);
       if (!ligne.enPause && ligne.attente === 0 && depart.soldats > 0) {
-        Soldats.creer(partie, depart, arrivee); // avant le retrait, pour garder le bon niveau
-        Lignes.payerEnvoi(depart, arrivee);
-        ligne.attente = Lignes.SECONDES_ENTRE_SOLDATS;
+        const type = Tours.typeDeSoldatActif(partie, depart);
+        if (type) {
+          Soldats.creer(partie, depart, arrivee, type); // avant le retrait, pour garder le bon niveau
+          Lignes.payerEnvoi(depart, arrivee, type);
+          ligne.attente = Lignes.SECONDES_ENTRE_SOLDATS;
+        }
       }
     }
 
     // Une tour sans soldats arrête ses lignes. Les soldats en route continuent.
     // Un ordi ne garde jamais de ligne au-delà de sa limite : les lignes en trop disparaissent.
+    // Une ligne de soin s'arrête si la tour soignée a changé de camp.
     partie.lignes = partie.lignes.filter((ligne) => {
       if (ligne.depart.soldats <= 0) return false;
+      if (Tours.fiche(ligne.depart).aura && ligne.arrivee.equipe !== ligne.depart.equipe) return false;
       return !ligne.enPause || ligne.depart.equipe === EQUIPE_JOUEUR;
     });
   },
 
-  payerEnvoi(depart, arrivee) {
-    depart.detteEnvoi += depart.equipe === arrivee.equipe ? Lignes.COUT_RENFORT : Lignes.COUT_ATTAQUE;
+  payerEnvoi(depart, arrivee, type) {
+    const fiche = TYPES_DE_SOLDATS[type];
+    const renfort = depart.equipe === arrivee.equipe && !fiche.soin;
+    depart.detteEnvoi += renfort ? Lignes.COUT_RENFORT : Lignes.COUT_ATTAQUE * fiche.coutEnvoi;
     while (depart.detteEnvoi >= 1) {
       depart.detteEnvoi -= 1;
       depart.soldats = Math.max(0, depart.soldats - 1);
@@ -190,7 +211,10 @@ const Lignes = {
       ctx.lineTo(b.x, b.y);
       ctx.setLineDash([10, 8]);
       // En rouge si la tour ne peut pas envoyer une ligne de plus.
-      ctx.strokeStyle = Lignes.peutPartirDe(partie, trace.depart) ? '#ffffff' : '#ff6b6b';
+      const possible = trace.cible
+        ? Lignes.peutRelier(partie, trace.depart, trace.cible)
+        : Lignes.peutPartirDe(partie, trace.depart);
+      ctx.strokeStyle = possible ? '#ffffff' : '#ff6b6b';
       ctx.lineWidth = epaisseur;
       ctx.lineCap = 'round';
       ctx.stroke();

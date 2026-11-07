@@ -6,7 +6,7 @@
   <title>Tower Battle</title>
   <!-- Le "?v=" est à changer à chaque version : il oblige le navigateur à reprendre les
        nouveaux fichiers, au lieu de mélanger cette page avec d'anciens scripts gardés en mémoire. -->
-  <link rel="stylesheet" href="css/style.css?v=1.6">
+  <link rel="stylesheet" href="css/style.css?v=1.7">
 </head>
 <body class="mode-menu">
   <span id="version" class="texte-version"></span>
@@ -40,6 +40,8 @@
       <div class="boutons-titre">
         <button id="bouton-jouer" type="button" class="bouton-principal" data-texte="jouer"></button>
         <button id="bouton-niveaux" type="button" data-texte="niveaux"></button>
+        <button id="bouton-collection" type="button" data-texte="collection"></button>
+        <button id="bouton-boutique" type="button" data-texte="boutique"></button>
         <button id="bouton-parametres" type="button" data-texte="parametres"></button>
         <button id="bouton-credits" type="button" data-texte="credits"></button>
       </div>
@@ -112,6 +114,50 @@
     </div>
   </section>
 
+  <!-- La collection -->
+  <section id="ecran-collection" class="ecran ecran-flou ecran-defilant">
+    <div class="panneau-large">
+      <div class="entete-niveaux">
+        <button type="button" class="bouton-retour" data-texte="retour"></button>
+        <h2 data-texte="collection"></h2>
+      </div>
+      <div class="choix">
+        <button type="button" data-onglet-collection="tour" data-texte="ongletTours"></button>
+        <button type="button" data-onglet-collection="soldat" data-texte="ongletSoldats"></button>
+        <span id="compte-collection"></span>
+      </div>
+      <div id="grille-collection" class="grille-cartes"></div>
+    </div>
+  </section>
+
+  <!-- La boutique -->
+  <section id="ecran-boutique" class="ecran ecran-flou ecran-defilant">
+    <div class="panneau-large">
+      <div class="entete-niveaux">
+        <button type="button" class="bouton-retour" data-texte="retour"></button>
+        <h2 data-texte="boutique"></h2>
+        <span class="bloc-pieces-petit"><span aria-hidden="true">🪙</span> <span id="pieces-boutique">0</span></span>
+      </div>
+      <h3 data-texte="skinsTours"></h3>
+      <div id="skins-tours" class="grille-cartes"></div>
+      <h3 data-texte="skinsSoldats"></h3>
+      <div id="skins-soldats" class="grille-cartes"></div>
+    </div>
+  </section>
+
+  <!-- La présentation d'un nouveau type débloqué -->
+  <section id="ecran-deblocage" class="ecran ecran-voile">
+    <div class="rayons" aria-hidden="true"></div>
+    <div id="deblocage-contenu" class="panneau panneau-deblocage">
+      <p id="deblocage-genre"></p>
+      <canvas id="vignette-3d" width="256" height="256" aria-hidden="true"></canvas>
+      <h2 id="deblocage-nom"></h2>
+      <p id="deblocage-description"></p>
+      <p id="deblocage-apprendre"></p>
+      <button id="deblocage-continuer" type="button" class="bouton-principal" data-texte="continuer"></button>
+    </div>
+  </section>
+
   <!-- Le mini menu de pause -->
   <section id="ecran-pause" class="ecran ecran-voile">
     <div class="panneau panneau-petit">
@@ -142,25 +188,33 @@
   </div>
 
   <!-- moteur.js reste en dernier : il lance le jeu quand tout le reste est chargé. -->
-  <script src="js/lib/three.min.js?v=1.6"></script>
-  <script src="js/sauvegarde.js?v=1.6"></script>
-  <script src="js/textes.js?v=1.6"></script>
-  <script src="js/sons.js?v=1.6"></script>
-  <script src="js/donnees-tours.js?v=1.6"></script>
-  <script src="js/tours.js?v=1.6"></script>
-  <script src="js/ameliorations.js?v=1.6"></script>
-  <script src="js/soldats.js?v=1.6"></script>
-  <script src="js/lignes.js?v=1.6"></script>
-  <script src="js/ordi.js?v=1.6"></script>
-  <script src="js/generateur.js?v=1.6"></script>
-  <script src="js/tutoriel.js?v=1.6"></script>
-  <script src="js/niveaux.js?v=1.6"></script>
-  <script src="js/modeles3d.js?v=1.6"></script>
-  <script src="js/camera.js?v=1.6"></script>
-  <script src="js/scene3d.js?v=1.6"></script>
-  <script src="js/interface-tours.js?v=1.6"></script>
-  <script src="js/carteniveaux.js?v=1.6"></script>
-  <script src="js/menu.js?v=1.6"></script>
-  <script src="js/moteur.js?v=1.6"></script>
+  <script src="js/lib/three.min.js?v=1.7"></script>
+  <script src="js/sauvegarde.js?v=1.7"></script>
+  <script src="js/textes.js?v=1.7"></script>
+  <script src="js/sons.js?v=1.7"></script>
+  <script src="js/donnees-tours.js?v=1.7"></script>
+  <script src="js/donnees-soldats.js?v=1.7"></script>
+  <script src="js/donnees-liens.js?v=1.7"></script>
+  <script src="js/donnees-skins.js?v=1.7"></script>
+  <script src="js/deblocages.js?v=1.7"></script>
+  <script src="js/tours.js?v=1.7"></script>
+  <script src="js/ameliorations.js?v=1.7"></script>
+  <script src="js/soldats.js?v=1.7"></script>
+  <script src="js/lignes.js?v=1.7"></script>
+  <script src="js/tirs.js?v=1.7"></script>
+  <script src="js/ordi.js?v=1.7"></script>
+  <script src="js/generateur.js?v=1.7"></script>
+  <script src="js/tutoriel.js?v=1.7"></script>
+  <script src="js/niveaux.js?v=1.7"></script>
+  <script src="js/modeles3d.js?v=1.7"></script>
+  <script src="js/camera.js?v=1.7"></script>
+  <script src="js/scene3d.js?v=1.7"></script>
+  <script src="js/interface-tours.js?v=1.7"></script>
+  <script src="js/vignettes.js?v=1.7"></script>
+  <script src="js/collection.js?v=1.7"></script>
+  <script src="js/boutique.js?v=1.7"></script>
+  <script src="js/carteniveaux.js?v=1.7"></script>
+  <script src="js/menu.js?v=1.7"></script>
+  <script src="js/moteur.js?v=1.7"></script>
 </body>
 </html>

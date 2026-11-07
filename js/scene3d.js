@@ -2,7 +2,13 @@
 // Ce fichier ne change aucune règle : il regarde la partie et l'affiche.
 
 const Scene3D = {
-  SOLDATS_MAX: 900,
+  SOLDATS_PAR_LOT: 400, // par type de soldat
+  JAMBES_MAX: 1600,
+  MORTS_MAX: 120,
+  DUREE_CHUTE: 1.6, // le temps qu'un soldat tombé reste à terre, en secondes
+  formes: {},
+  lots: new Map(),
+  morts: [],
   PARTICULES_MAX: 700,
   DUREE_INTRO: 1.7,
   ECHELLE_TOURS: 1.3, // les tours sont dessinées un peu plus grandes pour bien se voir
@@ -59,7 +65,19 @@ const Scene3D = {
     Scene3D.creerLumieres();
     Scene3D.creerMer();
     Scene3D.creerNuages();
+    Scene3D.outils = {
+      matrice: new THREE.Matrix4(),
+      position: new THREE.Vector3(),
+      rotation: new THREE.Quaternion(),
+      penche: new THREE.Quaternion(),
+      echelle: new THREE.Vector3(),
+      haut: new THREE.Vector3(0, 1, 0),
+      cote: new THREE.Vector3(1, 0, 0),
+      couleur: new THREE.Color(),
+    };
     Scene3D.creerSoldats();
+    Scene3D.creerProjectiles();
+    Scene3D.creerCerclePortee();
     Effets.installer(Scene3D.scene);
 
     Scene3D.textureLigne = Scene3D.creerTextureLigne();
@@ -147,16 +165,28 @@ const Scene3D = {
   },
 
   creerSoldats() {
-    Scene3D.soldats = new THREE.InstancedMesh(
-      Modeles3D.soldat(),
-      Modeles3D.materiau,
-      Scene3D.SOLDATS_MAX,
-    );
-    Scene3D.soldats.castShadow = true;
-    Scene3D.soldats.frustumCulled = false;
-    Scene3D.soldats.count = 0;
-    Scene3D.soldats.setColorAt(0, new THREE.Color('#ffffff'));
-    Scene3D.scene.add(Scene3D.soldats);
+    // Les corps sont créés à la demande, un lot par type de soldat et par couleur d'armure.
+    Scene3D.jambes = new THREE.InstancedMesh(Modeles3D.jambe(), Modeles3D.materiau, Scene3D.JAMBES_MAX);
+    Scene3D.jambes.frustumCulled = false;
+    Scene3D.jambes.castShadow = true;
+    Scene3D.jambes.count = 0;
+    Scene3D.jambes.setColorAt(0, new THREE.Color('#ffffff'));
+    Scene3D.scene.add(Scene3D.jambes);
+  },
+
+  // Le lot de corps pour ce type de soldat et cette armure.
+  lotDeCorps(type, armure) {
+    const cle = `${type}|${armure}`;
+    if (!Scene3D.lots.has(cle)) {
+      const lot = new THREE.InstancedMesh(Modeles3D.soldat(type, armure), Modeles3D.materiauSoldat, Scene3D.SOLDATS_PAR_LOT);
+      lot.frustumCulled = false;
+      lot.castShadow = true;
+      lot.count = 0;
+      lot.setColorAt(0, new THREE.Color('#ffffff'));
+      Scene3D.scene.add(lot);
+      Scene3D.lots.set(cle, lot);
+    }
+    return Scene3D.lots.get(cle);
   },
 
   // Une bande claire avec des chevrons qui avancent, pour montrer le sens de la ligne.
@@ -269,6 +299,7 @@ const Scene3D = {
       mesh.geometry.dispose();
     }
     Scene3D.objetsLignes.clear();
+    Scene3D.morts = [];
     Effets.vider();
 
     Scene3D.partie = partie;
@@ -316,6 +347,7 @@ const Scene3D = {
       couleur: couleurs.couleur,
       foncee: couleurs.foncee,
       boss: tour.boss,
+      skin: Scene3D.skinDeLaTour(tour),
     });
 
     const groupe = new THREE.Group();
@@ -332,6 +364,10 @@ const Scene3D = {
       banniere: null,
       roue: null,
       feu: null,
+      fut: null,
+      cristal: null,
+      angleFut: 0,
+      tempsAnneauSoin: Math.random() * 2,
       tempsFumee: Math.random(),
       apparition: ancien ? ancien.apparition : 0,
       pop: ancien ? ancien.pop : 0,
@@ -364,6 +400,21 @@ const Scene3D = {
       groupe.add(feu);
       objet.feu = feu;
     }
+    if (modele.canon) {
+      const fut = new THREE.Mesh(Scene3D.geometrie('fut', Modeles3D.futDeCanon), Modeles3D.materiau);
+      fut.position.set(...modele.canon);
+      fut.castShadow = true;
+      groupe.add(fut);
+      objet.fut = fut;
+      objet.angleFut = ancien ? ancien.angleFut : 0;
+    }
+    if (modele.cristal) {
+      const cristal = new THREE.Mesh(Scene3D.geometrie('cristal', () => new THREE.OctahedronGeometry(9, 0)), Scene3D.materiauCristal());
+      cristal.position.set(...modele.cristal);
+      cristal.castShadow = true;
+      groupe.add(cristal);
+      objet.cristal = cristal;
+    }
 
     tour.hauteurVisuelle = modele.hauteur * Scene3D.ECHELLE_TOURS;
     groupe.position.set(tour.x - partie.largeur / 2, 0, tour.y - partie.hauteur / 2);
@@ -373,7 +424,31 @@ const Scene3D = {
 
   cleTour(tour, couleurs) {
     const { renforcement, production, capacite } = tour.points;
-    return `${tour.type}|${renforcement}|${production}|${capacite}|${couleurs.couleur}|${tour.boss}`;
+    return `${tour.type}|${renforcement}|${production}|${capacite}|${couleurs.couleur}|${tour.boss}|${Scene3D.skinDeLaTour(tour)}`;
+  },
+
+  // Les skins ne concernent que le joueur.
+  skinDeLaTour(tour) {
+    return tour.equipe === EQUIPE_JOUEUR ? Sauvegarde.donnees.skinTour : 'classique';
+  },
+
+  // Une forme partagée, fabriquée une seule fois.
+  geometrie(nom, fabriquer) {
+    if (!Scene3D.formes[nom]) Scene3D.formes[nom] = fabriquer();
+    return Scene3D.formes[nom];
+  },
+
+  materiauCristal() {
+    if (!Scene3D._materiauCristal) {
+      Scene3D._materiauCristal = new THREE.MeshStandardMaterial({
+        color: '#7dffb0',
+        emissive: '#22d36a',
+        emissiveIntensity: 1.1,
+        flatShading: true,
+        roughness: 0.3,
+      });
+    }
+    return Scene3D._materiauCristal;
   },
 
   geometrieMat() {
@@ -450,6 +525,17 @@ const Scene3D = {
       objet.banniere.rotation.z = Math.sin(t * 5 + tour.y) * 0.06;
     }
     if (objet.roue) objet.roue.rotation.z = t * 1.6;
+    if (objet.fut) Scene3D.animerFut(tour, objet, dt);
+    if (objet.cristal) {
+      objet.cristal.rotation.y = t * 1.5;
+      objet.cristal.position.y = objet.modele.cristal[1] + Math.sin(t * 2.4) * 2.5;
+      objet.cristal.scale.setScalar(1 + Math.sin(t * 4) * 0.08);
+      objet.tempsAnneauSoin -= dt;
+      if (objet.tempsAnneauSoin <= 0 && EQUIPES[tour.equipe].produit) {
+        objet.tempsAnneauSoin = 2.4;
+        Effets.anneau(objet.groupe.position.x, 5, objet.groupe.position.z, '#6dffa8', Tours.fiche(tour).aura.portee, 1.4);
+      }
+    }
     if (objet.feu) {
       objet.feu.scale.set(1 + Math.sin(t * 17) * 0.18, 1 + Math.sin(t * 23) * 0.3, 1 + Math.cos(t * 19) * 0.18);
     }
@@ -462,6 +548,117 @@ const Scene3D = {
       const e = Scene3D.ECHELLE_TOURS;
       Effets.fumee(objet.groupe.position.x + x * e, y * e, objet.groupe.position.z + z * e);
     }
+  },
+
+  // Le canon pivote doucement vers sa cible, et recule à chaque tir.
+  animerFut(tour, objet, dt) {
+    if (tour.visee) {
+      const voulu = Math.atan2(tour.visee.x - tour.x, tour.visee.y - tour.y);
+      let ecart = voulu - objet.angleFut;
+      ecart = Math.atan2(Math.sin(ecart), Math.cos(ecart));
+      objet.angleFut += ecart * Math.min(1, dt * 5);
+    }
+    objet.fut.rotation.y = objet.angleFut;
+
+    const depuisTir = Scene3D.partie.temps - tour.dernierTir;
+    const recul = depuisTir >= 0 && depuisTir < 0.3 ? (1 - depuisTir / 0.3) * 8 : 0;
+    const [x, y, z] = objet.modele.canon;
+    objet.fut.position.set(
+      x - Math.sin(objet.angleFut) * recul,
+      y,
+      z - Math.cos(objet.angleFut) * recul,
+    );
+  },
+
+  // Le cercle de portée de la tour sélectionnée.
+  afficherPortee(partie) {
+    const tour = InterfaceTours.tourSelectionnee();
+    const portee = tour ? Tours.porteeAffichee(tour) : 0;
+    Scene3D.cerclePortee.visible = portee > 0;
+    if (portee <= 0) return;
+    Scene3D.cerclePortee.position.set(tour.x - partie.largeur / 2, 5, tour.y - partie.hauteur / 2);
+    Scene3D.cerclePortee.scale.setScalar(portee);
+    const couleur = Tours.fiche(tour).aura ? '#7dffb0' : partie.palette[tour.equipe].couleur;
+    for (const morceau of Scene3D.cerclePortee.children) morceau.material.color.set(couleur);
+  },
+
+  creerCerclePortee() {
+    const groupe = new THREE.Group();
+    const disque = new THREE.CircleGeometry(1, 48);
+    disque.rotateX(-Math.PI / 2);
+    const bord = new THREE.RingGeometry(0.975, 1, 64);
+    bord.rotateX(-Math.PI / 2);
+    groupe.add(
+      new THREE.Mesh(disque, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.14, depthWrite: false })),
+      new THREE.Mesh(bord, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.95, depthWrite: false })),
+    );
+    groupe.visible = false;
+    groupe.renderOrder = 2;
+    Scene3D.scene.add(groupe);
+    Scene3D.cerclePortee = groupe;
+  },
+
+  // --- Les flèches et les boulets ---
+
+  creerProjectiles() {
+    const creer = (geometrie, nombre) => {
+      const instances = new THREE.InstancedMesh(geometrie, Modeles3D.materiau, nombre);
+      instances.frustumCulled = false;
+      instances.castShadow = true;
+      instances.count = 0;
+      Scene3D.scene.add(instances);
+      return instances;
+    };
+    Scene3D.fleches = creer(Modeles3D.fleche(), 240);
+    Scene3D.boulets = creer(Modeles3D.boulet(), 60);
+  },
+
+  // La position d'un projectile en vol. Le boulet décrit un grand arc de cercle.
+  lieuProjectile(partie, p, avancee, cible) {
+    const fleche = p.genre === 'fleche';
+    const hauteurDepart = (p.depart.hauteurVisuelle || 70) * (fleche ? 0.8 : 0.7);
+    const hauteurFin = fleche ? 9 : 30;
+    const arc = (fleche ? 26 : 170) * 4 * avancee * (1 - avancee);
+    cible.set(
+      p.x + (p.cibleX - p.x) * avancee - partie.largeur / 2,
+      hauteurDepart + (hauteurFin - hauteurDepart) * avancee + arc,
+      p.y + (p.cibleY - p.y) * avancee - partie.hauteur / 2,
+    );
+    return cible;
+  },
+
+  synchroniserProjectiles(partie) {
+    const lieu = new THREE.Vector3();
+    const suivant = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    const avant = new THREE.Vector3(0, 0, 1);
+    const rotation = new THREE.Quaternion();
+    const un = new THREE.Vector3(1, 1, 1);
+    const matrice = new THREE.Matrix4();
+    let nbFleches = 0;
+    let nbBoulets = 0;
+
+    for (const p of partie.projectiles) {
+      const avancee = Math.min(1, p.temps / p.duree);
+      Scene3D.lieuProjectile(partie, p, avancee, lieu);
+      Scene3D.lieuProjectile(partie, p, Math.min(1, avancee + 0.04), suivant);
+      direction.subVectors(suivant, lieu);
+      if (direction.lengthSq() > 0.0001) rotation.setFromUnitVectors(avant, direction.normalize());
+      matrice.compose(lieu, rotation, un);
+
+      if (p.genre === 'fleche' && nbFleches < 240) {
+        Scene3D.fleches.setMatrixAt(nbFleches, matrice);
+        nbFleches += 1;
+      } else if (p.genre === 'boulet' && nbBoulets < 60) {
+        Scene3D.boulets.setMatrixAt(nbBoulets, matrice);
+        nbBoulets += 1;
+        if (Math.random() < 0.5) Effets.traineeBoulet(lieu.x, lieu.y, lieu.z);
+      }
+    }
+    Scene3D.fleches.count = nbFleches;
+    Scene3D.boulets.count = nbBoulets;
+    Scene3D.fleches.instanceMatrix.needsUpdate = true;
+    Scene3D.boulets.instanceMatrix.needsUpdate = true;
   },
 
   // --- Les lignes ---
@@ -506,7 +703,9 @@ const Scene3D = {
         mesh = Scene3D.creerLigne(partie, ligne, face);
         Scene3D.objetsLignes.set(ligne, mesh);
       }
-      mesh.material = Scene3D.materiauLigne(partie.palette[ligne.depart.equipe].couleur, ligne.enPause);
+      // Une ligne de soin est verte, quelle que soit l'équipe.
+      const couleur = Tours.fiche(ligne.depart).aura ? '#6dffa8' : partie.palette[ligne.depart.equipe].couleur;
+      mesh.material = Scene3D.materiauLigne(couleur, ligne.enPause);
     }
   },
 
@@ -535,39 +734,98 @@ const Scene3D = {
 
   // --- Les soldats ---
 
-  synchroniserSoldats(partie) {
-    const instances = Scene3D.soldats;
-    const matrice = Scene3D._matrice || (Scene3D._matrice = new THREE.Matrix4());
-    const position = Scene3D._position || (Scene3D._position = new THREE.Vector3());
-    const rotation = Scene3D._rotation || (Scene3D._rotation = new THREE.Quaternion());
-    const echelle = Scene3D._echelle || (Scene3D._echelle = new THREE.Vector3());
-    const haut = Scene3D._haut || (Scene3D._haut = new THREE.Vector3(0, 1, 0));
-    const couleur = Scene3D._couleur || (Scene3D._couleur = new THREE.Color());
+  armureDeLEquipe(equipe) {
+    const skin = equipe === EQUIPE_JOUEUR ? Sauvegarde.donnees.skinSoldat : 'classique';
+    return SKINS_SOLDATS[skin].armure;
+  },
 
-    const nombre = Math.min(partie.soldats.length, Scene3D.SOLDATS_MAX);
-    instances.count = nombre;
+  // Ajoute un corps à son lot, penché selon l'angle demandé (pour se battre ou tomber).
+  poserCorps(type, equipe, couleur, x, y, z, direction, penche, taille) {
+    const v = Scene3D.outils;
+    const lot = Scene3D.lotDeCorps(type, Scene3D.armureDeLEquipe(equipe));
+    if (lot.count >= Scene3D.SOLDATS_PAR_LOT) return null;
+    v.rotation.setFromAxisAngle(v.haut, direction);
+    v.penche.setFromAxisAngle(v.cote, penche);
+    v.rotation.multiply(v.penche);
+    v.position.set(x, y, z);
+    v.echelle.setScalar(taille);
+    v.matrice.compose(v.position, v.rotation, v.echelle);
+    lot.setMatrixAt(lot.count, v.matrice);
+    lot.setColorAt(lot.count, v.couleur.set(couleur));
+    lot.count += 1;
+    return lot;
+  },
+
+  synchroniserSoldats(partie, dt) {
+    const v = Scene3D.outils;
     const t = Scene3D.horloge;
+    for (const lot of Scene3D.lots.values()) lot.count = 0;
+    let jambes = 0;
 
-    for (let i = 0; i < nombre; i++) {
-      const s = partie.soldats[i];
+    for (const s of partie.soldats) {
+      if (s.mort) continue;
       const lieu = Soldats.position(s);
-      // Les soldats trottinent : ils sautillent et se balancent en marchant.
-      const pas = t * (s.vitesse / 9) + s.phase;
-      position.set(
-        lieu.x - partie.largeur / 2,
-        4 + Math.abs(Math.sin(pas)) * 4,
-        lieu.y - partie.hauteur / 2,
-      );
+      const x = lieu.x - partie.largeur / 2;
+      const z = lieu.y - partie.hauteur / 2;
+      const couleur = partie.palette[s.equipe].couleur;
       const direction = Math.atan2(s.arrivee.x - s.depart.x, s.arrivee.y - s.depart.y);
-      rotation.setFromAxisAngle(haut, direction + Math.sin(pas) * 0.28);
-      const taille = 0.95 + s.niveau * 0.14;
-      echelle.set(taille, taille, taille);
-      matrice.compose(position, rotation, echelle);
-      instances.setMatrixAt(i, matrice);
-      instances.setColorAt(i, couleur.set(partie.palette[s.equipe].couleur));
+      const taille = 1.15 + s.niveau * 0.16;
+
+      // Ils marchent : le corps sautille à chaque pas et les jambes se balancent.
+      const pas = t * (s.vitesse / 7) + s.phase;
+      const hanche = 5.2 * taille + Math.abs(Math.sin(pas)) * 1.6;
+      // Face à un ennemi, ils se penchent et frappent. Le coureur court toujours penché.
+      let penche = Soldats.fiche(s).vitesse > 1.5 ? 0.3 : 0.04;
+      if (s.engage) penche = 0.4 + Math.sin(t * 22 + s.phase) * 0.3;
+      Scene3D.poserCorps(s.type, s.equipe, couleur, x, hanche + 3, z, direction + Math.sin(pas) * 0.14, penche, taille);
+
+      // Deux jambes, en opposition.
+      for (const cote of [-1, 1]) {
+        if (jambes >= Scene3D.JAMBES_MAX) break;
+        v.rotation.setFromAxisAngle(v.haut, direction);
+        v.penche.setFromAxisAngle(v.cote, s.engage ? 0.2 : Math.sin(pas) * cote * 0.75);
+        v.rotation.multiply(v.penche);
+        v.position.set(
+          x + Math.cos(direction) * 1.9 * taille * cote,
+          hanche,
+          z - Math.sin(direction) * 1.9 * taille * cote,
+        );
+        v.echelle.setScalar(taille);
+        v.matrice.compose(v.position, v.rotation, v.echelle);
+        Scene3D.jambes.setMatrixAt(jambes, v.matrice);
+        Scene3D.jambes.setColorAt(jambes, v.couleur.set(couleur));
+        jambes += 1;
+      }
     }
-    instances.instanceMatrix.needsUpdate = true;
-    if (instances.instanceColor) instances.instanceColor.needsUpdate = true;
+
+    // Ceux qui viennent de mourir tombent à la renverse, restent un instant, puis disparaissent.
+    Scene3D.morts = Scene3D.morts.filter((m) => {
+      m.temps += dt;
+      if (m.temps >= Scene3D.DUREE_CHUTE) return false;
+      const chute = Math.min(1, m.temps / 0.32);
+      const fin = Math.max(0, m.temps - (Scene3D.DUREE_CHUTE - 0.5)) / 0.5;
+      const taille = 1.3 * (1 - fin);
+      Scene3D.poserCorps(
+        m.soldat,
+        m.equipe,
+        partie.palette[m.equipe].couleur,
+        m.x,
+        3 + (1 - chute) * 7 - fin * 3,
+        m.z,
+        m.direction,
+        -chute * (Math.PI / 2),
+        Math.max(0.01, taille),
+      );
+      return true;
+    });
+
+    for (const lot of Scene3D.lots.values()) {
+      lot.instanceMatrix.needsUpdate = true;
+      if (lot.instanceColor) lot.instanceColor.needsUpdate = true;
+    }
+    Scene3D.jambes.count = jambes;
+    Scene3D.jambes.instanceMatrix.needsUpdate = true;
+    if (Scene3D.jambes.instanceColor) Scene3D.jambes.instanceColor.needsUpdate = true;
   },
 
   // --- Les événements de la partie deviennent des effets ---
@@ -604,6 +862,40 @@ const Scene3D = {
           break;
         case 'coupe':
           Effets.impact(e.x - partie.largeur / 2, 8, e.y - partie.hauteur / 2, '#ffffff', 10);
+          break;
+        case 'mort':
+          if (Scene3D.morts.length < Scene3D.MORTS_MAX) {
+            Scene3D.morts.push({
+              x: e.x - partie.largeur / 2,
+              z: e.y - partie.hauteur / 2,
+              soldat: e.soldat,
+              equipe: e.equipe,
+              direction: e.direction,
+              temps: 0,
+            });
+          }
+          break;
+        case 'tir':
+          if (e.genre === 'boulet') {
+            const hauteur = (e.tour.hauteurVisuelle || 70) * 0.7;
+            Effets.departCanon(...lieuTour(e.tour, hauteur));
+          }
+          break;
+        case 'fleche':
+          Effets.impact(e.x - partie.largeur / 2, 10, e.y - partie.hauteur / 2, e.bloquee ? '#ffe9a8' : '#ffffff', e.bloquee ? 5 : 3);
+          break;
+        case 'boulet':
+          Effets.explosion(e.x - partie.largeur / 2, 28, e.y - partie.hauteur / 2);
+          if (objet) objet.tremble = 1;
+          Scene3D.secousse = Math.max(Scene3D.secousse, 0.3);
+          break;
+        case 'soin':
+          Effets.soin(...lieuTour(e.tour, 20));
+          break;
+        case 'piege':
+          Effets.piege(...lieuTour(e.tour, 10));
+          if (objet) objet.tremble = 1;
+          Scene3D.secousse = 1;
           break;
         default:
           break;
@@ -658,8 +950,10 @@ const Scene3D = {
 
     Scene3D.synchroniserTours(partie, dt);
     Scene3D.synchroniserLignes(partie, dt);
-    Scene3D.synchroniserSoldats(partie);
     Scene3D.lireEvenements(partie);
+    Scene3D.synchroniserSoldats(partie, dt);
+    Scene3D.synchroniserProjectiles(partie);
+    Scene3D.afficherPortee(partie);
     Scene3D.animerCamera(etat, dt);
     Scene3D.animerDecor(dt);
     Effets.mettreAJour(dt);
@@ -938,6 +1232,54 @@ const Effets = {
         grossit: false,
       });
     }
+  },
+
+  departCanon(x, y, z) {
+    Effets.flash(x, y, z, '#ffd27a', 70, 0.2);
+    Effets.gerbe(x, y, z, '#b8b8b8', 6, { vitesse: 45, montee: 45, gravite: -10, taille: 3, vie: 0.7 });
+  },
+
+  traineeBoulet(x, y, z) {
+    Effets.ajouter({
+      x,
+      y,
+      z,
+      vx: 0,
+      vy: 4,
+      vz: 0,
+      gravite: 0,
+      taille: 2.2,
+      vie: 0.45,
+      duree: 0.45,
+      r: 0.5,
+      g: 0.5,
+      b: 0.5,
+      grossit: true,
+    });
+  },
+
+  // La petite explosion à l'arrivée d'un boulet.
+  explosion(x, y, z) {
+    Effets.flash(x, y + 6, z, '#ffb347', 120, 0.3);
+    Effets.anneau(x, 5, z, '#ffb347', 62, 0.45);
+    Effets.gerbe(x, y, z, '#ff8a2b', 16, { vitesse: 90, montee: 120, gravite: 240, taille: 2.6, vie: 0.65 });
+    Effets.gerbe(x, y, z, '#ffd27a', 8, { vitesse: 60, montee: 90, gravite: 180, taille: 1.6, vie: 0.45 });
+    Effets.gerbe(x, y, z, '#5b5650', 10, { vitesse: 70, montee: 110, gravite: 290, taille: 2.2, vie: 0.8 });
+  },
+
+  soin(x, y, z) {
+    Effets.gerbe(x, y, z, '#6dffa8', 5, { vitesse: 18, montee: 42, gravite: -12, taille: 1.7, vie: 0.8 });
+  },
+
+  // Le piège : une grosse explosion, avec une colonne de feu et des débris partout.
+  piege(x, y, z) {
+    Effets.flash(x, 50, z, '#ff7a33', 300, 0.55);
+    Effets.anneau(x, 5, z, '#ff5a1f', 190, 0.8);
+    Effets.anneau(x, 5, z, '#ffd27a', 110, 0.55);
+    Effets.colonne(x, z, '#ff6a2b', 44, 320, 0.8);
+    Effets.gerbe(x, y, z, '#ff6a2b', 60, { vitesse: 190, montee: 260, gravite: 300, taille: 3.8, vie: 1.1 });
+    Effets.gerbe(x, y, z, '#ffd27a', 26, { vitesse: 130, montee: 200, gravite: 220, taille: 2.2, vie: 0.8 });
+    Effets.gerbe(x, y, z, '#4d4843', 26, { vitesse: 150, montee: 220, gravite: 380, taille: 3, vie: 1.2 });
   },
 
   feuDArtifice() {

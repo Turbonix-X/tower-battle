@@ -1,6 +1,6 @@
 // menu.js — Les écrans et les boutons : titre, paramètres, crédits, pause, fin et barre du haut.
 
-const VERSION_JEU = 'Alpha 1.6';
+const VERSION_JEU = 'Alpha 1.7';
 
 const Menu = {
   segments: {}, // un morceau de la barre des soldats par équipe
@@ -20,6 +20,16 @@ const Menu = {
     });
     brancher('bouton-parametres', () => Menu.montrerEcran('ecran-parametres'));
     brancher('bouton-credits', () => Menu.montrerEcran('ecran-credits'));
+    brancher('bouton-collection', () => {
+      Collection.afficher();
+      Menu.montrerEcran('ecran-collection');
+    });
+    brancher('bouton-boutique', () => {
+      Boutique.afficher();
+      Menu.montrerEcran('ecran-boutique');
+    });
+    brancher('deblocage-continuer', Menu.deblocageSuivant);
+    Collection.installer();
     for (const bouton of document.querySelectorAll('.bouton-retour')) {
       bouton.addEventListener('click', Menu.afficherTitre);
     }
@@ -109,7 +119,8 @@ const Menu = {
 
   // Échap ramène à l'écran titre depuis les sous-écrans du menu.
   retourDepuisSousEcran() {
-    if (['ecran-niveaux', 'ecran-parametres', 'ecran-credits'].includes(Menu.ecranActuel)) {
+    const sousEcrans = ['ecran-niveaux', 'ecran-parametres', 'ecran-credits', 'ecran-collection', 'ecran-boutique'];
+    if (sousEcrans.includes(Menu.ecranActuel)) {
       Menu.afficherTitre();
     }
   },
@@ -164,6 +175,37 @@ const Menu = {
     document.getElementById('bouton-suivant').hidden = !(victoire && aUnSuivant);
     Menu.afficherBulle(null);
     Menu.montrerEcran('ecran-fin');
+  },
+
+  // Présente les nouveautés une par une, puis continue avec "ensuite".
+  afficherDeblocages(entrees, ensuite) {
+    Menu.deblocagesAVoir = [...entrees];
+    Menu.apresDeblocages = ensuite;
+    Deblocages.marquerVus(entrees);
+    Menu.afficherBulle(null);
+    Menu.deblocageSuivant();
+  },
+
+  deblocageSuivant() {
+    const entree = Menu.deblocagesAVoir.shift();
+    if (!entree) {
+      Vignettes.arreter();
+      Menu.apresDeblocages();
+      return;
+    }
+    document.getElementById('deblocage-genre').textContent = Textes.t(
+      entree.genre === 'tour' ? 'nouvelleTour' : 'nouveauSoldat',
+    );
+    document.getElementById('deblocage-nom').textContent = Textes.t(entree.fiche.nom);
+    document.getElementById('deblocage-description').textContent = Textes.t(entree.fiche.description);
+    document.getElementById('deblocage-apprendre').textContent = Textes.t('apprendreAuProchainNiveau');
+    Vignettes.faireTourner(entree);
+    Menu.montrerEcran('ecran-deblocage');
+    // Rejoue l'animation d'arrivée pour chaque nouveauté.
+    const contenu = document.getElementById('deblocage-contenu');
+    contenu.classList.remove('arrivee');
+    void contenu.offsetWidth;
+    contenu.classList.add('arrivee');
   },
 
   afficherBulle(cle) {

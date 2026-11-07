@@ -107,14 +107,14 @@ const NIVEAUX_TUTORIEL = [
       { action: 'capture', tour: 3, texte: 'tut7b' },
     ],
   },
-  // 8. Compter double. On y croise aussi une forteresse et un campement.
+  // 8. Compter double.
   {
     ordis: [{ equipe: 'rouge', force: 2, attenteInitiale: 15 }],
     tempsEtoiles: { trois: 50, deux: 95 },
     tours: [
       { x: 150, y: 330, equipe: 'bleu', soldats: 32, pv: 20 },
-      { x: 480, y: 170, equipe: 'neutre', soldats: 8, pv: 6, type: 'forteresse' },
-      { x: 480, y: 490, equipe: 'neutre', soldats: 8, pv: 6, type: 'campement' },
+      { x: 480, y: 170, equipe: 'neutre', soldats: 8, pv: 6 },
+      { x: 480, y: 490, equipe: 'neutre', soldats: 8, pv: 6 },
       { x: 850, y: 330, equipe: 'rouge', soldats: 8, pv: 10 },
     ],
     tutoriel: [{ action: 'capture', tour: 3, texte: 'tut8a', main: { de: 0, vers: 3 } }],
@@ -208,6 +208,7 @@ const Niveaux = {
       or: { [EQUIPE_JOUEUR]: niveau.orDepart ?? Niveaux.OR_DE_DEPART }, // disparaît à la fin du niveau
       lignes: [],
       soldats: [],
+      projectiles: [], // les flèches et les boulets en vol
       evenements: [], // ce qui vient de se passer, pour les effets 3D
       trace: null, // la ligne en train d'être tracée
       coupe: null, // le trait en train de couper des lignes
