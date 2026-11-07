@@ -7,8 +7,34 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <header id="barre-haut">
+    <div id="barre-boutons">
+      <span id="version">Alpha 1.4</span>
+      <button id="bouton-pause" type="button">Pause</button>
+      <button id="bouton-recommencer" type="button">Recommencer</button>
+    </div>
+    <div id="barre-parts" role="img" aria-label="Part de soldats de chaque équipe"></div>
+  </header>
+
   <canvas id="jeu" aria-label="Carte de Tower Battle"></canvas>
-  <div id="version">Alpha 1.3</div>
+
+  <div id="ecran-pause" class="ecran" hidden>
+    <h2>Pause</h2>
+  </div>
+
+  <div id="ecran-menu" class="ecran ecran-plein" hidden>
+    <h1>Tower Battle</h1>
+    <button id="bouton-jouer" type="button" class="bouton-principal">Jouer</button>
+  </div>
+
+  <div id="ecran-fin" class="ecran ecran-plein" hidden>
+    <h2 id="fin-titre"></h2>
+    <p id="fin-temps"></p>
+    <div class="ecran-boutons">
+      <button id="bouton-rejouer" type="button" class="bouton-principal">Rejouer</button>
+      <button id="bouton-menu" type="button">Menu</button>
+    </div>
+  </div>
 
   <!-- moteur.js reste en dernier : il lance le jeu quand tout le reste est chargé. -->
   <script src="js/sauvegarde.js"></script>

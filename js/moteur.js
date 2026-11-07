@@ -42,6 +42,7 @@ const Moteur = {
   canvas: null,
   ctx: null,
   partie: null,
+  etat: 'menu', // 'menu', 'enJeu', 'pause' ou 'fin'
   tempsPrecedent: 0,
 
   demarrer() {
@@ -51,12 +52,59 @@ const Moteur = {
 
     Moteur.redimensionner();
     window.addEventListener('resize', Moteur.redimensionner);
-    Lignes.installerControles(Moteur.canvas, Moteur.partie, Vue);
+    // Les gestes ne comptent que pendant que la partie tourne.
+    Lignes.installerControles(Moteur.canvas, Vue, () =>
+      Moteur.etat === 'enJeu' ? Moteur.partie : null,
+    );
+    Menu.installer({
+      jouer: Moteur.nouvellePartie,
+      recommencer: Moteur.nouvellePartie,
+      pause: Moteur.basculerPause,
+      menu: Moteur.allerAuMenu,
+    });
+    Moteur.allerAuMenu();
 
     requestAnimationFrame((temps) => {
       Moteur.tempsPrecedent = temps;
       Moteur.boucle(temps);
     });
+  },
+
+  nouvellePartie() {
+    Moteur.partie = Niveaux.creerPartie(0);
+    Moteur.etat = 'enJeu';
+    Moteur.redimensionner();
+    Menu.afficherJeu();
+  },
+
+  allerAuMenu() {
+    Moteur.partie = Niveaux.creerPartie(0); // la carte reste visible derrière le menu
+    Moteur.etat = 'menu';
+    Menu.afficherMenu();
+  },
+
+  basculerPause() {
+    if (Moteur.etat === 'enJeu') {
+      Moteur.etat = 'pause';
+      Moteur.partie.trace = null;
+      Moteur.partie.coupe = null;
+      Menu.afficherPause();
+    } else if (Moteur.etat === 'pause') {
+      Moteur.etat = 'enJeu';
+      Menu.afficherJeu();
+    }
+  },
+
+  verifierFin() {
+    const { tours, ordis, temps } = Moteur.partie;
+    const victoire = !tours.some((tour) => ordis.some((ordi) => ordi.equipe === tour.equipe));
+    const defaite = !tours.some((tour) => tour.equipe === EQUIPE_JOUEUR);
+    if (!victoire && !defaite) return;
+
+    Moteur.etat = 'fin';
+    Moteur.partie.trace = null;
+    Moteur.partie.coupe = null;
+    Menu.afficherFin(victoire, temps);
   },
 
   redimensionner() {
@@ -72,16 +120,20 @@ const Moteur = {
   boucle(temps) {
     const dt = Math.min((temps - Moteur.tempsPrecedent) / 1000, Moteur.DT_MAX);
     Moteur.tempsPrecedent = temps;
-    Moteur.mettreAJour(dt);
+    if (Moteur.etat === 'enJeu') Moteur.mettreAJour(dt);
     Moteur.dessiner();
+    Menu.mettreAJourParts(Moteur.partie);
     requestAnimationFrame(Moteur.boucle);
   },
 
   mettreAJour(dt) {
     const partie = Moteur.partie;
+    partie.temps += dt;
+    Ordi.mettreAJour(partie, dt);
     for (const tour of partie.tours) Tours.mettreAJour(tour, dt);
     Lignes.mettreAJour(partie, dt);
     Soldats.mettreAJour(partie, dt);
+    Moteur.verifierFin();
   },
 
   dessiner() {

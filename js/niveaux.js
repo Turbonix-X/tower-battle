@@ -5,6 +5,7 @@ const Niveaux = {
     {
       largeur: 1000,
       hauteur: 640,
+      ordis: [{ equipe: 'rouge', force: 3 }],
       tours: [
         { x: 100, y: 320, equipe: 'bleu', soldats: 10, pv: 20 },
         { x: 900, y: 320, equipe: 'rouge', soldats: 10, pv: 20 },
@@ -27,6 +28,8 @@ const Niveaux = {
       largeur: niveau.largeur,
       hauteur: niveau.hauteur,
       tours: niveau.tours.map((tour) => Tours.creer(tour)),
+      ordis: niveau.ordis.map((ordi) => Ordi.creer(ordi)),
+      temps: 0, // la durée de la partie, en secondes, sans les pauses
       lignes: [],
       soldats: [],
       combats: [], // les animations de combat en cours

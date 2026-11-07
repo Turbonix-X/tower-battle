@@ -62,8 +62,9 @@ const Lignes = {
 
   // Souris et doigt passent par les mêmes événements "pointer".
   // Un geste qui part de ma tour trace une ligne. Partout ailleurs, il coupe.
-  installerControles(canvas, partie, vue) {
-    const lirePointeur = (e) => {
+  // "obtenirPartie" renvoie la partie en cours, ou rien si les gestes sont bloqués.
+  installerControles(canvas, vue, obtenirPartie) {
+    const lirePointeur = (e, partie) => {
       const cadre = canvas.getBoundingClientRect();
       const x = e.clientX - cadre.left;
       const y = e.clientY - cadre.top;
@@ -74,8 +75,9 @@ const Lignes = {
     };
 
     canvas.addEventListener('pointerdown', (e) => {
-      if (partie.trace || partie.coupe || e.button !== 0) return;
-      const { x, y, tour } = lirePointeur(e);
+      const partie = obtenirPartie();
+      if (!partie || partie.trace || partie.coupe || e.button !== 0) return;
+      const { x, y, tour } = lirePointeur(e, partie);
       canvas.setPointerCapture(e.pointerId);
       if (tour && tour.equipe === EQUIPE_JOUEUR) {
         partie.trace = { pointeur: e.pointerId, depart: tour, cible: null, ecranX: x, ecranY: y };
@@ -85,7 +87,9 @@ const Lignes = {
     });
 
     canvas.addEventListener('pointermove', (e) => {
-      const { x, y, tour } = lirePointeur(e);
+      const partie = obtenirPartie();
+      if (!partie) return;
+      const { x, y, tour } = lirePointeur(e, partie);
       const { trace, coupe } = partie;
 
       if (trace && trace.pointeur === e.pointerId) {
@@ -99,10 +103,12 @@ const Lignes = {
     });
 
     canvas.addEventListener('pointerup', (e) => {
+      const partie = obtenirPartie();
+      if (!partie) return;
       const { trace, coupe } = partie;
 
       if (trace && trace.pointeur === e.pointerId) {
-        const { tour } = lirePointeur(e);
+        const { tour } = lirePointeur(e, partie);
         partie.trace = null;
         // La tour a pu être perdue pendant le tracé.
         if (tour && trace.depart.equipe === EQUIPE_JOUEUR) {
@@ -114,6 +120,8 @@ const Lignes = {
     });
 
     canvas.addEventListener('pointercancel', (e) => {
+      const partie = obtenirPartie();
+      if (!partie) return;
       if (partie.trace && partie.trace.pointeur === e.pointerId) partie.trace = null;
       if (partie.coupe && partie.coupe.pointeur === e.pointerId) partie.coupe = null;
     });

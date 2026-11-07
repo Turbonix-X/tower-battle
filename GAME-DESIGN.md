@@ -87,6 +87,19 @@ Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
 - **Ligne impossible :** si la tour n'a plus de place ou plus de soldats, la ligne n'est pas créée et les pointillés du tracé sont rouges.
 - **Faire un geste :** un geste qui part d'une de mes tours trace une ligne. Partout ailleurs, il coupe. Seules les lignes du joueur peuvent être coupées.
 
+### Fin de partie
+
+- **Victoire** si toutes les tours rouges sont à moi.
+- **Défaite** si je n'ai plus de tours.
+- La partie s'arrête tout de suite, même s'il reste des soldats en route.
+- L'écran de victoire ou de défaite montre le temps de la partie (sans les pauses), avec les boutons **Rejouer** et **Menu**.
+
+### Interface
+
+- Un bouton **Pause** et un bouton **Recommencer** en haut de l'écran.
+- Une barre en haut montre la part de soldats de chaque équipe : ceux dans ses tours et ceux en route. Les tours neutres ne comptent pas.
+- Le jeu s'ouvre sur un menu très simple avec un bouton **Jouer**, en attendant le vrai menu.
+
 ## 4. Équipes
 
 | Couleur | Qui joue ?            |
@@ -136,4 +149,20 @@ Les équipes supplémentaires ne sont présentes que dans certaines parties.
 
 ## 13. Ordis
 
-*À compléter*
+### L'ordi rouge
+
+- Il joue tout seul toutes les **2 à 3 secondes**.
+- Il capture d'abord les tours neutres proches qu'il peut battre.
+- Il attaque ensuite mes tours les plus faibles.
+- Il se défend quand une de ses tours est attaquée.
+- Il a un réglage de **force de 1 à 10**. Pour l'instant, il est à **force 3**.
+
+### Précisions choisies pendant le développement
+
+Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
+
+- **Priorités :** à chaque tour, il se défend d'abord, puis il capture une tour neutre, puis il m'attaque.
+- **Se défendre :** la tour attaquée riposte vers la tour qui l'attaque si elle a au moins 3 soldats. Sinon, une tour voisine ayant au moins 5 soldats envoie des renforts.
+- **Peut battre :** il compte les soldats, les PV et les niveaux, et il peut réunir plusieurs tours pour une même attaque.
+- **Couper ses lignes :** il coupe une ligne quand assez de soldats sont partis, ou quand l'attaque ne peut plus réussir.
+- **Effet de la force :** plus elle est haute, plus il fait d'actions par tour (1 à force 3, 3 à force 10). Plus elle est basse, plus il prend parfois son deuxième meilleur choix (35 % du temps à force 3).
