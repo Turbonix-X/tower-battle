@@ -67,7 +67,7 @@ const Soldats = {
       x,
       y,
       temps: 0,
-      couleurs: [EQUIPES[a.equipe].couleur, EQUIPES[b.equipe].couleur],
+      couleurs: [partie.palette[a.equipe].couleur, partie.palette[b.equipe].couleur],
     });
 
     if (a.niveau > b.niveau && !a.blesse) {
@@ -128,7 +128,7 @@ const Soldats = {
       const { x, y } = vue.versEcran(monde.x, monde.y);
       ctx.beginPath();
       ctx.arc(x, y, rayon, 0, Math.PI * 2);
-      ctx.fillStyle = EQUIPES[soldat.equipe].couleur;
+      ctx.fillStyle = partie.palette[soldat.equipe].couleur;
       ctx.fill();
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.5;

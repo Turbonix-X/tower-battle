@@ -52,7 +52,8 @@ Ce nombre de lignes est rangé par type de tour, car il changera plus tard selon
 
 - Le joueur trace une ligne en glissant de sa tour vers une autre tour, à la souris ou au doigt.
 - Des petits soldats partent en file le long de la ligne, environ **2 par seconde**.
-- Chaque soldat envoyé retire 1 au compteur de la tour de départ.
+- **Attaquer coûte moins que ce qu'on gagne :** chaque soldat envoyé sur un adversaire ne coûte que 0,4 à la tour de départ. Avec une ligne, elle perd 0,8 par seconde et en gagne 1 : son compteur continue de monter.
+- **Un renfort coûte un soldat entier :** entre deux tours d'une même équipe, chaque envoi retire 1, sinon on pourrait fabriquer des soldats à l'infini.
 
 ### Arrêter une ligne
 
@@ -83,22 +84,35 @@ Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
 - **« Compter double » sur une ligne :** le soldat le plus fort survit à son premier combat et tue son adversaire. Au combat suivant, il compte pour un seul soldat.
 - **« Compter double » à l'arrivée :** un attaquant plus fort tue 2 défenseurs. Si la tour est plus forte, il faut 2 attaquants pour tuer 1 défenseur.
 - **PV :** un soldat retire toujours 1 PV, même s'il compte double. Un soldat qui tue le dernier défenseur ne retire pas de PV en plus.
-- **Trop de lignes :** si le niveau baisse, les lignes en trop (les plus récentes) se mettent en pause et s'affichent plus pâles. Elles repartent si le niveau remonte.
+- **Trop de lignes :** si le niveau baisse, les lignes en trop du joueur (les plus récentes) se mettent en pause et s'affichent plus pâles. Elles repartent si le niveau remonte. Celles d'un ordi disparaissent tout de suite, pour qu'il ne dépasse jamais sa limite.
 - **Ligne impossible :** si la tour n'a plus de place ou plus de soldats, la ligne n'est pas créée et les pointillés du tracé sont rouges.
 - **Faire un geste :** un geste qui part d'une de mes tours trace une ligne. Partout ailleurs, il coupe. Seules les lignes du joueur peuvent être coupées.
 
 ### Fin de partie
 
-- **Victoire** si toutes les tours rouges sont à moi.
+- **Victoire** si toutes les tours ennemies sont à moi (ou prises par quelqu'un d'autre, tant qu'il ne reste aucun ennemi).
 - **Défaite** si je n'ai plus de tours.
 - La partie s'arrête tout de suite, même s'il reste des soldats en route.
-- L'écran de victoire ou de défaite montre le temps de la partie (sans les pauses), avec les boutons **Rejouer** et **Menu**.
+- L'écran de victoire ou de défaite montre le temps de la partie (sans les pauses) et les étoiles, avec les boutons **Niveau suivant** (après une victoire), **Rejouer** et **Menu**.
 
 ### Interface
 
-- Un bouton **Pause** et un bouton **Recommencer** en haut de l'écran.
+- Un bouton **Pause** et un bouton **Recommencer** en haut de l'écran, avec le numéro du niveau.
+- **Échap** (ou le bouton Pause) ouvre un mini menu qui met le jeu en pause : Reprendre, Recommencer, Menu, avec le numéro de version. Échap referme le mini menu.
 - Une barre en haut montre la part de soldats de chaque équipe : ceux dans ses tours et ceux en route. Les tours neutres ne comptent pas.
-- Le jeu s'ouvre sur un menu très simple avec un bouton **Jouer**, en attendant le vrai menu.
+
+### Menu
+
+- **Écran titre** : le nom du jeu, un fond animé avec des petites tours et des soldats qui marchent, et les boutons **Jouer**, **Niveaux**, **Paramètres** et **Crédits** (« Turbonix Entertainment »).
+- **Jouer** lance le dernier niveau débloqué.
+- **Paramètres** : volume de la musique, volume des effets, vitesse du jeu (×1, ×2), langue (français, anglais).
+- Des transitions en fondu relient les écrans.
+
+### Sauvegarde
+
+- Tout est gardé dans le navigateur (localStorage, toujours dans un try/catch) : niveau atteint, étoiles, paramètres, et pour plus tard l'argent et les tours débloquées.
+- Un bouton dans les paramètres efface la sauvegarde, après une confirmation.
+- Une sauvegarde abîmée ou un stockage bloqué ne font pas planter le jeu : il repart avec les valeurs par défaut.
 
 ## 4. Équipes
 
@@ -145,24 +159,67 @@ Les équipes supplémentaires ne sont présentes que dans certaines parties.
 
 ## 12. Niveaux
 
-*À compléter*
+Il y a **1000 niveaux**. Ils ne sont pas écrits un par un : un générateur fabrique chaque niveau à partir de son numéro, avec un hasard à graine. Le niveau 57 est donc toujours le même.
+
+### Tutoriel (niveaux 1 à 10)
+
+Faits à la main, avec une main animée et une bulle de conseil : tracer une ligne, soldats et PV, attaquer, niveaux des tours, deux lignes, couper une ligne, renforts, compter double, combat sur une ligne, deux ennemis.
+
+### Difficulté
+
+Elle monte doucement avec le numéro : nombre de tours (8 à 22, plus 2 pour un boss), soldats de départ, taille de la carte et donc distance entre les tours, force des ordis, nombre d'équipes ennemies (2 à partir du niveau 60, 3 à partir de 250, 4 à partir de 600, 5 à partir de 850).
+
+### Vérifications du générateur
+
+Un niveau est refusé, et refait avec une autre graine, si des tours se chevauchent, si une tour sort de la carte, si un ennemi démarre trop près du joueur, ou si aucune tour neutre n'est à la portée du joueur.
+
+### Boss
+
+Tous les 50 niveaux, un niveau « boss » : un seul ennemi, un peu plus fort que d'habitude, avec une tour couronnée qui a beaucoup de soldats et de PV et qui produit 1,5 fois plus vite.
+
+### Étoiles
+
+3 étoiles si je gagne vite, 2 en temps moyen, 1 si je gagne lentement. Les temps sont propres à chaque niveau, et le meilleur score est gardé. La vitesse ×2 ne change pas le calcul : le temps compté est celui du jeu.
+
+### Carte des niveaux
+
+Un chemin qui serpente, par pages de 50 niveaux. Les niveaux se débloquent un par un, avec les étoiles affichées.
+
+### Réglages prévus pour plus tard
+
+Le générateur a déjà des réglages vides : décor, obstacles, types de tours, brouillard.
 
 ## 13. Ordis
 
-### L'ordi rouge
+### Force
 
-- Il joue tout seul toutes les **2 à 3 secondes**.
-- Il capture d'abord les tours neutres proches qu'il peut battre.
-- Il attaque ensuite mes tours les plus faibles.
-- Il se défend quand une de ses tours est attaquée.
-- Il a un réglage de **force de 1 à 10**. Pour l'instant, il est à **force 3**.
+Chaque ordi a une **force de 1 à 10**, choisie par le générateur selon le numéro du niveau. Il joue toutes les **2 à 3 secondes**.
+
+Sa couleur montre sa force, pour toutes les équipes (rouge, jaune, vert, orange, violet) : très pâle = ordi nul, très foncée et intense = ordi très fort.
+
+| Force | Catégorie | Comportement |
+|-------|-----------|--------------|
+| 1 à 3 | Faible | Attaque au hasard, oublie souvent de se défendre |
+| 4 à 7 | Moyen | Prend les tours neutres proches, attaque les tours faibles, se défend |
+| 8 à 10 | Fort | Attend d'avoir assez de soldats, attaque les tours qui se vident, attaque par plusieurs côtés à la fois, change de cible selon la situation |
+
+### Personnalités
+
+- **L'agressif :** attaque plus tôt et cherche les tours ennemies avant les neutres, mais se défend moins.
+- **Le défenseur :** attend une plus grosse marge avant d'attaquer et se défend toujours.
+- **Le rusé :** profite des tours déjà occupées à se battre contre quelqu'un d'autre.
+
+### Plusieurs ennemis
+
+Dans certains niveaux, plusieurs équipes ennemies s'affrontent : elles m'attaquent, mais s'attaquent aussi entre elles.
 
 ### Précisions choisies pendant le développement
 
 Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
 
-- **Priorités :** à chaque tour, il se défend d'abord, puis il capture une tour neutre, puis il m'attaque.
+- **Priorités des ordis moyens et forts :** ils se défendent d'abord. Ensuite, ils capturent les tours neutres puis attaquent (l'ordre inverse pour l'agressif).
 - **Se défendre :** la tour attaquée riposte vers la tour qui l'attaque si elle a au moins 3 soldats. Sinon, une tour voisine ayant au moins 5 soldats envoie des renforts.
-- **Peut battre :** il compte les soldats, les PV et les niveaux, et il peut réunir plusieurs tours pour une même attaque.
+- **Peut battre :** l'ordi compte les soldats, les PV et les niveaux, et peut réunir plusieurs tours pour une même attaque. Il ne compte que les soldats qu'il a vraiment, même si envoyer coûte moins cher.
 - **Couper ses lignes :** il coupe une ligne quand assez de soldats sont partis, ou quand l'attaque ne peut plus réussir.
-- **Effet de la force :** plus elle est haute, plus il fait d'actions par tour (1 à force 3, 3 à force 10). Plus elle est basse, plus il prend parfois son deuxième meilleur choix (35 % du temps à force 3).
+- **Effet de la force :** plus elle est haute, plus il fait d'actions par tour (1 à force 3, 3 à force 10). Plus elle est basse, plus il prend parfois son deuxième meilleur choix.
+- **Pour laisser sa chance au joueur :** les ordis ne l'attaquent pas pendant les 20 premières secondes (sauf pour riposter), se méfient davantage de lui, préfèrent leurs voisins et évitent une tour déjà visée par une autre équipe.

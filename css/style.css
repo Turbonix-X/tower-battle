@@ -49,12 +49,18 @@ body {
   /* Reste visible par-dessus les écrans. */
   position: relative;
   z-index: 20;
-  margin-right: auto;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+#info-niveau {
+  margin-right: auto;
+  font-size: 14px;
+  font-weight: bold;
+  white-space: nowrap;
 }
 
 #barre-parts {
@@ -75,10 +81,38 @@ body {
   line-height: 18px;
   text-align: center;
   white-space: nowrap;
+  color: #ffffff;
+  text-shadow: 0 0 3px #000000, 0 0 3px #000000;
 }
 
 .part[hidden] {
   display: none;
+}
+
+/* --- La bulle du tutoriel --- */
+
+#bulle-tutoriel {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 5;
+  width: min(560px, calc(100% - 32px));
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 216, 77, 0.6);
+  border-radius: 8px;
+  background: rgba(10, 22, 14, 0.92);
+  font-size: 15px;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+#bulle-tutoriel.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 /* --- Les boutons --- */
@@ -93,15 +127,30 @@ button {
   font: inherit;
   font-size: 14px;
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #36604a;
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 button:focus-visible {
   outline: 2px solid #ffd84d;
   outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button[hidden] {
+  display: none;
 }
 
 .bouton-principal {
@@ -110,11 +159,20 @@ button:focus-visible {
   font-weight: bold;
 }
 
-.bouton-principal:hover {
+.bouton-principal:hover:not(:disabled) {
   background: #1f66e0;
 }
 
-/* --- Les écrans --- */
+.bouton-danger {
+  border-color: #e5383b;
+  background: #5a1f22;
+}
+
+.bouton-danger:hover:not(:disabled) {
+  background: #7a282c;
+}
+
+/* --- Les écrans et leurs transitions --- */
 
 .ecran {
   position: fixed;
@@ -124,20 +182,32 @@ button:focus-visible {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
   padding: 16px;
+  box-sizing: border-box;
   text-align: center;
-  /* L'écran de pause laisse passer les clics vers le bouton Reprendre. */
-  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
 }
 
-.ecran[hidden] {
-  display: none;
+.ecran.visible {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
 }
 
-.ecran-plein {
-  background: rgba(10, 22, 14, 0.8);
-  pointer-events: auto;
+.ecran-opaque {
+  background: radial-gradient(circle at 50% 35%, #2f5d3a 0%, #142b1c 75%);
+}
+
+.ecran-voile {
+  background: rgba(10, 22, 14, 0.75);
+}
+
+.ecran-defilant {
+  justify-content: flex-start;
+  overflow-y: auto;
 }
 
 .ecran h1,
@@ -146,14 +216,9 @@ button:focus-visible {
   margin: 0;
 }
 
-.ecran h1,
 .ecran h2 {
-  font-size: 40px;
+  font-size: 32px;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
-}
-
-.ecran p {
-  font-size: 18px;
 }
 
 .ecran-boutons {
@@ -163,8 +228,288 @@ button:focus-visible {
   gap: 12px;
 }
 
-.ecran-plein button {
+/* --- L'écran titre --- */
+
+#fond-menu {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.75;
+}
+
+.contenu-titre {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.contenu-titre h1 {
+  font-size: clamp(44px, 11vw, 88px);
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-shadow: 0 4px 0 #174a9e, 0 8px 18px rgba(0, 0, 0, 0.75);
+  animation: titre-flotte 4s ease-in-out infinite;
+}
+
+@keyframes titre-flotte {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.boutons-titre {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(280px, 80vw);
+}
+
+.boutons-titre button {
+  min-height: 48px;
+  font-size: 18px;
+  background-color: rgba(20, 43, 28, 0.9);
+}
+
+.boutons-titre .bouton-principal {
+  background: #2f7bff;
+}
+
+.boutons-titre .bouton-principal:hover {
+  background: #1f66e0;
+}
+
+/* --- Les panneaux --- */
+
+.panneau {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(460px, 100%);
+  margin: auto;
+  padding: 24px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 32, 21, 0.94);
+}
+
+.panneau button {
   min-height: 44px;
-  min-width: 120px;
   font-size: 16px;
+}
+
+.panneau-petit {
+  width: min(320px, 100%);
+  gap: 12px;
+}
+
+.version-menu {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#fin-etoiles {
+  font-size: 40px;
+  line-height: 1;
+  color: #ffd84d;
+}
+
+#fin-etoiles[hidden] {
+  display: none;
+}
+
+.nom-studio {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ffd84d;
+}
+
+/* --- Les paramètres --- */
+
+.reglage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  font-size: 15px;
+}
+
+.reglage input {
+  width: 100%;
+  accent-color: #2f7bff;
+}
+
+.choix {
+  display: flex;
+  gap: 8px;
+}
+
+.choix button {
+  flex: 1;
+}
+
+.choix button.actif {
+  border-color: transparent;
+  background: #2f7bff;
+  font-weight: bold;
+}
+
+#confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(90, 31, 34, 0.5);
+}
+
+#confirmation[hidden] {
+  display: none;
+}
+
+#message-sauvegarde:empty {
+  display: none;
+}
+
+/* --- La carte des niveaux --- */
+
+.panneau-niveaux {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(560px, 100%);
+}
+
+.entete-niveaux {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.entete-niveaux h2 {
+  flex: 1;
+  font-size: 22px;
+  text-align: right;
+}
+
+.pages-niveaux {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#carte-niveaux {
+  position: relative;
+  height: 860px;
+  flex-shrink: 0;
+}
+
+.chemin {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.chemin polyline {
+  fill: none;
+  stroke-linejoin: round;
+}
+
+.chemin-complet {
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 6;
+  stroke-dasharray: 2 10;
+  stroke-linecap: round;
+}
+
+.chemin-atteint {
+  stroke: #ffd84d;
+  stroke-width: 5;
+}
+
+.noeud {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  min-height: 0;
+  padding: 0;
+  margin: -27px 0 0 -27px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #2f7bff;
+  animation: noeud-apparait 0.35s ease backwards;
+}
+
+.noeud:hover:not(:disabled) {
+  background: #1f66e0;
+  transform: scale(1.08);
+}
+
+@keyframes noeud-apparait {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+.noeud-numero {
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+.noeud-etoiles {
+  font-size: 10px;
+  line-height: 1;
+  color: #ffd84d;
+  letter-spacing: -1px;
+}
+
+.noeud-actuel {
+  box-shadow: 0 0 0 4px rgba(255, 216, 77, 0.45);
+  border-color: #ffd84d;
+}
+
+.noeud-verrouille {
+  background: #33423a;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.noeud-boss {
+  width: 66px;
+  height: 66px;
+  margin: -33px 0 0 -33px;
+  background: #8f1d20;
+  border-color: #ffd84d;
+}
+
+.noeud-boss.noeud-verrouille {
+  background: #4a2628;
+}
+
+.noeud-boss .noeud-numero::before {
+  content: '♛ ';
+  color: #ffd84d;
+}
+
+/* Moins de mouvement pour ceux qui le demandent à leur navigateur. */
+@media (prefers-reduced-motion: reduce) {
+  .ecran,
+  button,
+  #bulle-tutoriel {
+    transition-duration: 0.01s;
+  }
+
+  .contenu-titre h1,
+  .noeud {
+    animation: none;
+  }
 }

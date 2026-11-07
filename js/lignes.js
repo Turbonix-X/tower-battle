@@ -3,6 +3,13 @@
 const Lignes = {
   SECONDES_ENTRE_SOLDATS: 0.5, // soit environ 2 soldats par seconde
 
+  // Ce que coûte à la tour un soldat envoyé sur un adversaire.
+  // À 2 soldats par seconde, elle perd 0,8 par seconde et en gagne 1 : son compteur monte.
+  COUT_ATTAQUE: 0.4,
+  // Un renfort entre deux tours d'une même équipe coûte un soldat entier,
+  // sinon deux tours pourraient fabriquer des soldats à l'infini en s'envoyant des renforts.
+  COUT_RENFORT: 1,
+
   // Une tour a besoin de soldats, et de place dans sa limite de lignes.
   peutPartirDe(partie, tour) {
     const lignes = partie.lignes.filter((ligne) => ligne.depart === tour).length;
@@ -33,13 +40,25 @@ const Lignes = {
       ligne.attente = Math.max(0, ligne.attente - dt);
       if (!ligne.enPause && ligne.attente === 0 && depart.soldats > 0) {
         Soldats.creer(partie, depart, arrivee); // avant le retrait, pour garder le bon niveau
-        depart.soldats -= 1;
+        Lignes.payerEnvoi(depart, arrivee);
         ligne.attente = Lignes.SECONDES_ENTRE_SOLDATS;
       }
     }
 
     // Une tour sans soldats arrête ses lignes. Les soldats en route continuent.
-    partie.lignes = partie.lignes.filter((ligne) => ligne.depart.soldats > 0);
+    // Un ordi ne garde jamais de ligne au-delà de sa limite : les lignes en trop disparaissent.
+    partie.lignes = partie.lignes.filter((ligne) => {
+      if (ligne.depart.soldats <= 0) return false;
+      return !ligne.enPause || ligne.depart.equipe === EQUIPE_JOUEUR;
+    });
+  },
+
+  payerEnvoi(depart, arrivee) {
+    depart.detteEnvoi += depart.equipe === arrivee.equipe ? Lignes.COUT_RENFORT : Lignes.COUT_ATTAQUE;
+    while (depart.detteEnvoi >= 1) {
+      depart.detteEnvoi -= 1;
+      depart.soldats = Math.max(0, depart.soldats - 1);
+    }
   },
 
   // Coupe les lignes du joueur croisées par le segment p1-p2 (en coordonnées d'écran).
@@ -134,7 +153,7 @@ const Lignes = {
     for (const ligne of partie.lignes) {
       const a = vue.versEcran(ligne.depart.x, ligne.depart.y);
       const b = vue.versEcran(ligne.arrivee.x, ligne.arrivee.y);
-      const couleur = EQUIPES[ligne.depart.equipe].couleur;
+      const couleur = partie.palette[ligne.depart.equipe].couleur;
 
       // Quand deux tours s'envoient des soldats, chacune dessine sa moitié de la ligne.
       const face = partie.lignes.some(

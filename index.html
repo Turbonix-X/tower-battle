@@ -9,41 +9,133 @@
 <body>
   <header id="barre-haut">
     <div id="barre-boutons">
-      <span id="version">Alpha 1.4</span>
-      <button id="bouton-pause" type="button">Pause</button>
-      <button id="bouton-recommencer" type="button">Recommencer</button>
+      <span id="version" class="texte-version"></span>
+      <span id="info-niveau"></span>
+      <button id="bouton-pause" type="button" data-texte="pause"></button>
+      <button id="bouton-recommencer" type="button" data-texte="recommencer"></button>
     </div>
-    <div id="barre-parts" role="img" aria-label="Part de soldats de chaque équipe"></div>
+    <div id="barre-parts" role="img" data-texte-aria="partsAria"></div>
   </header>
 
-  <canvas id="jeu" aria-label="Carte de Tower Battle"></canvas>
+  <canvas id="jeu" data-texte-aria="carteAria"></canvas>
+  <div id="bulle-tutoriel" role="status"></div>
 
-  <div id="ecran-pause" class="ecran" hidden>
-    <h2>Pause</h2>
-  </div>
-
-  <div id="ecran-menu" class="ecran ecran-plein" hidden>
-    <h1>Tower Battle</h1>
-    <button id="bouton-jouer" type="button" class="bouton-principal">Jouer</button>
-  </div>
-
-  <div id="ecran-fin" class="ecran ecran-plein" hidden>
-    <h2 id="fin-titre"></h2>
-    <p id="fin-temps"></p>
-    <div class="ecran-boutons">
-      <button id="bouton-rejouer" type="button" class="bouton-principal">Rejouer</button>
-      <button id="bouton-menu" type="button">Menu</button>
+  <!-- L'écran titre -->
+  <section id="ecran-titre" class="ecran ecran-opaque">
+    <canvas id="fond-menu" aria-hidden="true"></canvas>
+    <div class="contenu-titre">
+      <h1>Tower Battle</h1>
+      <div class="boutons-titre">
+        <button id="bouton-jouer" type="button" class="bouton-principal" data-texte="jouer"></button>
+        <button id="bouton-niveaux" type="button" data-texte="niveaux"></button>
+        <button id="bouton-parametres" type="button" data-texte="parametres"></button>
+        <button id="bouton-credits" type="button" data-texte="credits"></button>
+      </div>
     </div>
-  </div>
+  </section>
+
+  <!-- La carte des niveaux -->
+  <section id="ecran-niveaux" class="ecran ecran-opaque ecran-defilant">
+    <div class="panneau-niveaux">
+      <div class="entete-niveaux">
+        <button type="button" class="bouton-retour" data-texte="retour"></button>
+        <h2 id="titre-page"></h2>
+      </div>
+      <div class="pages-niveaux">
+        <button id="page-precedente" type="button" data-texte="pagePrecedente"></button>
+        <button id="page-suivante" type="button" data-texte="pageSuivante"></button>
+      </div>
+      <div id="carte-niveaux"></div>
+    </div>
+  </section>
+
+  <!-- Les paramètres -->
+  <section id="ecran-parametres" class="ecran ecran-opaque ecran-defilant">
+    <div class="panneau">
+      <h2 data-texte="parametres"></h2>
+      <label class="reglage">
+        <span data-texte="musique"></span>
+        <input id="reglage-musique" type="range" min="0" max="100">
+      </label>
+      <label class="reglage">
+        <span data-texte="effets"></span>
+        <input id="reglage-effets" type="range" min="0" max="100">
+      </label>
+      <div class="reglage">
+        <span data-texte="vitesse"></span>
+        <div class="choix">
+          <button type="button" data-vitesse="1">×1</button>
+          <button type="button" data-vitesse="2">×2</button>
+        </div>
+      </div>
+      <div class="reglage">
+        <span data-texte="langue"></span>
+        <div class="choix">
+          <button type="button" data-langue="fr" data-texte="francais"></button>
+          <button type="button" data-langue="en" data-texte="anglais"></button>
+        </div>
+      </div>
+
+      <button id="bouton-effacer" type="button" class="bouton-danger" data-texte="effacer"></button>
+      <div id="confirmation" hidden>
+        <p data-texte="confirmerEffacer"></p>
+        <div class="ecran-boutons">
+          <button id="effacer-annuler" type="button" data-texte="annuler"></button>
+          <button id="effacer-oui" type="button" class="bouton-danger" data-texte="ouiEffacer"></button>
+        </div>
+      </div>
+      <p id="message-sauvegarde" role="status"></p>
+
+      <button type="button" class="bouton-retour" data-texte="retour"></button>
+    </div>
+  </section>
+
+  <!-- Les crédits -->
+  <section id="ecran-credits" class="ecran ecran-opaque">
+    <div class="panneau">
+      <h2 data-texte="credits"></h2>
+      <p data-texte="creditsPar"></p>
+      <p class="nom-studio">Turbonix Entertainment</p>
+      <button type="button" class="bouton-retour" data-texte="retour"></button>
+    </div>
+  </section>
+
+  <!-- Le mini menu de pause -->
+  <section id="ecran-pause" class="ecran ecran-voile">
+    <div class="panneau panneau-petit">
+      <h2 data-texte="pause"></h2>
+      <p class="texte-version version-menu"></p>
+      <button id="pause-reprendre" type="button" class="bouton-principal" data-texte="reprendre"></button>
+      <button id="pause-recommencer" type="button" data-texte="recommencer"></button>
+      <button id="pause-menu" type="button" data-texte="menu"></button>
+    </div>
+  </section>
+
+  <!-- La fin de partie -->
+  <section id="ecran-fin" class="ecran ecran-voile">
+    <div class="panneau panneau-petit">
+      <h2 id="fin-titre"></h2>
+      <p id="fin-etoiles"></p>
+      <p id="fin-temps"></p>
+      <button id="bouton-suivant" type="button" class="bouton-principal" data-texte="suivant"></button>
+      <button id="bouton-rejouer" type="button" data-texte="rejouer"></button>
+      <button id="bouton-menu" type="button" data-texte="menu"></button>
+    </div>
+  </section>
 
   <!-- moteur.js reste en dernier : il lance le jeu quand tout le reste est chargé. -->
   <script src="js/sauvegarde.js"></script>
+  <script src="js/textes.js"></script>
   <script src="js/sons.js"></script>
   <script src="js/tours.js"></script>
   <script src="js/soldats.js"></script>
   <script src="js/lignes.js"></script>
   <script src="js/ordi.js"></script>
+  <script src="js/generateur.js"></script>
+  <script src="js/tutoriel.js"></script>
   <script src="js/niveaux.js"></script>
+  <script src="js/fondmenu.js"></script>
+  <script src="js/carteniveaux.js"></script>
   <script src="js/menu.js"></script>
   <script src="js/moteur.js"></script>
 </body>

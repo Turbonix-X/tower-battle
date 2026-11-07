@@ -1,13 +1,31 @@
 // tours.js — Les tours : équipe, compteur de soldats et types de tours.
 
 // "produit" : est-ce que les tours de cette équipe gagnent des soldats avec le temps ?
+// "teinte" : la couleur de base d'une équipe d'ordi, dont l'intensité dépend de sa force.
 const EQUIPES = {
   bleu: { couleur: '#2f7bff', foncee: '#174a9e', produit: true },
-  rouge: { couleur: '#e5383b', foncee: '#8f1d20', produit: true },
   neutre: { couleur: '#9aa0a6', foncee: '#5c6166', produit: false },
+  rouge: { teinte: 0, produit: true },
+  jaune: { teinte: 50, produit: true },
+  vert: { teinte: 125, produit: true },
+  orange: { teinte: 28, produit: true },
+  violet: { teinte: 275, produit: true },
 };
 
 const EQUIPE_JOUEUR = 'bleu';
+
+// Force 1 : couleur très pâle. Force 10 : couleur très foncée et intense.
+function couleursEquipe(nom, force = 5) {
+  const equipe = EQUIPES[nom];
+  if (equipe.teinte === undefined) return { couleur: equipe.couleur, foncee: equipe.foncee };
+  const avancee = (force - 1) / 9;
+  const saturation = 55 + 45 * avancee;
+  const lumiere = 82 - 50 * avancee;
+  return {
+    couleur: `hsl(${equipe.teinte}, ${saturation}%, ${lumiere}%)`,
+    foncee: `hsl(${equipe.teinte}, ${saturation}%, ${Math.max(16, lumiere - 20)}%)`,
+  };
+}
 
 // "lignesParNiveau" : combien de lignes peuvent partir en même temps aux niveaux 1, 2 et 3.
 const TYPES_DE_TOURS = {
@@ -22,8 +40,22 @@ const Tours = {
   SOLDATS_PAR_SECONDE: 1,
 
   // Une tour a deux valeurs séparées : "soldats" (son attaque) et "pv" (sa durabilité).
-  creer({ x, y, equipe, soldats, pv, type = 'base' }) {
-    return { x, y, equipe, type, soldats, pv, pvMax: pv, tempsProduction: 0, demiPerte: false };
+  // "production" multiplie les soldats gagnés : une tour de boss en produit plus.
+  creer({ x, y, equipe, soldats, pv, type = 'base', production = 1, boss = false }) {
+    return {
+      x,
+      y,
+      equipe,
+      type,
+      soldats,
+      pv,
+      pvMax: pv,
+      production,
+      boss,
+      tempsProduction: 0,
+      demiPerte: false,
+      detteEnvoi: 0,
+    };
   },
 
   // Le niveau découle du compteur : il monte et redescend tout seul avec les soldats.
@@ -37,7 +69,7 @@ const Tours = {
 
   mettreAJour(tour, dt) {
     if (!EQUIPES[tour.equipe].produit) return;
-    tour.tempsProduction += dt * Tours.SOLDATS_PAR_SECONDE;
+    tour.tempsProduction += dt * Tours.SOLDATS_PAR_SECONDE * tour.production;
     while (tour.tempsProduction >= 1) {
       tour.tempsProduction -= 1;
       tour.soldats += 1;
@@ -50,6 +82,7 @@ const Tours = {
     tour.soldats = 0;
     tour.tempsProduction = 0;
     tour.demiPerte = false;
+    tour.detteEnvoi = 0;
   },
 
   // Renvoie la tour la plus proche du point (x, y), à moins de "portee" de son centre.
@@ -66,10 +99,10 @@ const Tours = {
     return meilleure;
   },
 
-  dessiner(ctx, tour, vue, enSurbrillance) {
+  dessiner(ctx, tour, vue, palette, enSurbrillance) {
     const { x, y } = vue.versEcran(tour.x, tour.y);
     const rayon = Tours.RAYON * vue.echelle;
-    const equipe = EQUIPES[tour.equipe];
+    const equipe = palette[tour.equipe];
 
     // Les créneaux, vus de dessus.
     const creneau = rayon * 0.34;
@@ -81,15 +114,20 @@ const Tours = {
       ctx.fillRect(cx - creneau / 2, cy - creneau / 2, creneau, creneau);
     }
 
-    // Le corps de la tour.
+    // Le corps de la tour, avec un contour clair pour rester visible sur l'herbe.
     ctx.beginPath();
     ctx.arc(x, y, rayon * 0.92, 0, Math.PI * 2);
     ctx.fillStyle = equipe.foncee;
     ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
     ctx.beginPath();
     ctx.arc(x, y, rayon * 0.68, 0, Math.PI * 2);
     ctx.fillStyle = equipe.couleur;
     ctx.fill();
+
+    if (tour.boss) Tours.dessinerCouronne(ctx, x, y, rayon);
 
     if (enSurbrillance) {
       ctx.beginPath();
@@ -134,5 +172,31 @@ const Tours = {
     ctx.strokeText(tour.soldats, x, compteurY);
     ctx.fillStyle = '#ffffff';
     ctx.fillText(tour.soldats, x, compteurY);
+  },
+
+  // Un anneau doré et une couronne pour reconnaître la tour d'un boss.
+  dessinerCouronne(ctx, x, y, rayon) {
+    ctx.beginPath();
+    ctx.arc(x, y, rayon * 1.1, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffd84d';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    const l = rayon * 0.5;
+    const h = rayon * 0.32;
+    ctx.beginPath();
+    ctx.moveTo(x - l, y + h);
+    ctx.lineTo(x - l, y - h);
+    ctx.lineTo(x - l / 2, y);
+    ctx.lineTo(x, y - h);
+    ctx.lineTo(x + l / 2, y);
+    ctx.lineTo(x + l, y - h);
+    ctx.lineTo(x + l, y + h);
+    ctx.closePath();
+    ctx.fillStyle = '#ffd84d';
+    ctx.fill();
+    ctx.strokeStyle = '#10201a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
   },
 };

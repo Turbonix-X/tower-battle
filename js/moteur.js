@@ -46,19 +46,26 @@ const Moteur = {
   tempsPrecedent: 0,
 
   demarrer() {
+    Sauvegarde.charger();
     Moteur.canvas = document.getElementById('jeu');
     Moteur.ctx = Moteur.canvas.getContext('2d');
-    Moteur.partie = Niveaux.creerPartie(0);
+    Moteur.partie = Niveaux.creerPartie(1);
 
     Moteur.redimensionner();
     window.addEventListener('resize', Moteur.redimensionner);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !e.repeat) Moteur.touchEchap();
+    });
     // Les gestes ne comptent que pendant que la partie tourne.
     Lignes.installerControles(Moteur.canvas, Vue, () =>
       Moteur.etat === 'enJeu' ? Moteur.partie : null,
     );
+    FondMenu.installer();
     Menu.installer({
-      jouer: Moteur.nouvellePartie,
-      recommencer: Moteur.nouvellePartie,
+      jouer: () => Moteur.nouvellePartie(Sauvegarde.donnees.niveauAtteint),
+      choisirNiveau: Moteur.nouvellePartie,
+      recommencer: () => Moteur.nouvellePartie(Moteur.partie.numero),
+      suivant: () => Moteur.nouvellePartie(Moteur.partie.numero + 1),
       pause: Moteur.basculerPause,
       menu: Moteur.allerAuMenu,
     });
@@ -70,17 +77,22 @@ const Moteur = {
     });
   },
 
-  nouvellePartie() {
-    Moteur.partie = Niveaux.creerPartie(0);
+  nouvellePartie(numero) {
+    Moteur.partie = Niveaux.creerPartie(numero);
     Moteur.etat = 'enJeu';
     Moteur.redimensionner();
-    Menu.afficherJeu();
+    Menu.afficherJeu(Moteur.partie);
   },
 
   allerAuMenu() {
-    Moteur.partie = Niveaux.creerPartie(0); // la carte reste visible derrière le menu
     Moteur.etat = 'menu';
-    Menu.afficherMenu();
+    Menu.afficherTitre();
+  },
+
+  // Échap met en pause, et reprend si le mini menu est déjà ouvert.
+  touchEchap() {
+    if (Moteur.etat === 'enJeu' || Moteur.etat === 'pause') Moteur.basculerPause();
+    else if (Moteur.etat === 'menu') Menu.retourDepuisSousEcran();
   },
 
   basculerPause() {
@@ -91,12 +103,13 @@ const Moteur = {
       Menu.afficherPause();
     } else if (Moteur.etat === 'pause') {
       Moteur.etat = 'enJeu';
-      Menu.afficherJeu();
+      Menu.montrerEcran(null);
     }
   },
 
+  // Gagné quand il ne reste aucune tour ennemie, perdu quand le joueur n'a plus de tours.
   verifierFin() {
-    const { tours, ordis, temps } = Moteur.partie;
+    const { tours, ordis, temps, niveau, numero } = Moteur.partie;
     const victoire = !tours.some((tour) => ordis.some((ordi) => ordi.equipe === tour.equipe));
     const defaite = !tours.some((tour) => tour.equipe === EQUIPE_JOUEUR);
     if (!victoire && !defaite) return;
@@ -104,7 +117,10 @@ const Moteur = {
     Moteur.etat = 'fin';
     Moteur.partie.trace = null;
     Moteur.partie.coupe = null;
-    Menu.afficherFin(victoire, temps);
+
+    const etoiles = victoire ? Niveaux.etoiles(niveau, temps) : 0;
+    if (victoire) Sauvegarde.enregistrerVictoire(numero, etoiles);
+    Menu.afficherFin({ victoire, temps, etoiles, aUnSuivant: numero < Niveaux.NOMBRE });
   },
 
   redimensionner() {
@@ -120,15 +136,21 @@ const Moteur = {
   boucle(temps) {
     const dt = Math.min((temps - Moteur.tempsPrecedent) / 1000, Moteur.DT_MAX);
     Moteur.tempsPrecedent = temps;
-    if (Moteur.etat === 'enJeu') Moteur.mettreAJour(dt);
-    Moteur.dessiner();
-    Menu.mettreAJourParts(Moteur.partie);
+    // La vitesse x2 joue simplement deux fois plus de temps à chaque image.
+    if (Moteur.etat === 'enJeu') Moteur.mettreAJour(dt * Sauvegarde.donnees.parametres.vitesse);
+    if (Moteur.etat === 'menu') {
+      FondMenu.animer(dt);
+    } else {
+      Moteur.dessiner();
+      Menu.mettreAJourParts(Moteur.partie);
+    }
     requestAnimationFrame(Moteur.boucle);
   },
 
   mettreAJour(dt) {
     const partie = Moteur.partie;
     partie.temps += dt;
+    Tutoriel.mettreAJour(partie, dt);
     Ordi.mettreAJour(partie, dt);
     for (const tour of partie.tours) Tours.mettreAJour(tour, dt);
     Lignes.mettreAJour(partie, dt);
@@ -150,8 +172,9 @@ const Moteur = {
     Lignes.dessinerGeste(ctx, partie, Vue);
     for (const tour of partie.tours) {
       const visee = partie.trace && (partie.trace.cible === tour || partie.trace.depart === tour);
-      Tours.dessiner(ctx, tour, Vue, visee);
+      Tours.dessiner(ctx, tour, Vue, partie.palette, visee);
     }
+    Tutoriel.dessiner(ctx, partie, Vue);
   },
 
   dessinerCarte() {
