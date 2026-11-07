@@ -1,6 +1,6 @@
 // menu.js — Les écrans et les boutons : titre, paramètres, crédits, pause, fin et barre du haut.
 
-const VERSION_JEU = 'Alpha 1.7';
+const VERSION_JEU = 'Alpha 1.7.1';
 
 const Menu = {
   segments: {}, // un morceau de la barre des soldats par équipe
@@ -51,6 +51,73 @@ const Menu = {
       element.textContent = VERSION_JEU;
     }
     Menu.appliquerParametres();
+    Menu.installerAnimations();
+  },
+
+  // --- Les animations des menus (l'apparence est dans style.css) ---
+
+  ETINCELLES: 26,
+  INCLINAISON_CARTE: 10, // en degrés, au bord de la carte
+
+  installerAnimations() {
+    // Des étincelles dorées et bleues qui montent derrière le titre, la victoire et les nouveautés.
+    for (const zone of document.querySelectorAll('.particules')) {
+      for (let i = 0; i < Menu.ETINCELLES; i++) {
+        const etincelle = document.createElement('span');
+        etincelle.className = 'etincelle';
+        const style = etincelle.style;
+        style.setProperty('--x', `${Math.random() * 100}%`);
+        style.setProperty('--taille', `${4 + Math.random() * 9}px`);
+        style.setProperty('--duree', `${7 + Math.random() * 9}s`);
+        style.setProperty('--retard', `${-Math.random() * 16}s`);
+        style.setProperty('--balance', `${(Math.random() - 0.5) * 120}px`);
+        style.setProperty('--couleur', Math.random() < 0.7 ? '#ffd76a' : '#5b9dff');
+        zone.append(etincelle);
+      }
+    }
+
+    // Une onde part du doigt ou de la souris quand on appuie sur un bouton.
+    document.addEventListener('pointerdown', (e) => {
+      const bouton = e.target.closest('button');
+      if (!bouton || bouton.disabled || bouton.classList.contains('noeud')) return;
+      const cadre = bouton.getBoundingClientRect();
+      const onde = document.createElement('span');
+      onde.className = 'onde';
+      onde.style.left = `${e.clientX - cadre.left}px`;
+      onde.style.top = `${e.clientY - cadre.top}px`;
+      onde.addEventListener('animationend', () => onde.remove());
+      bouton.append(onde);
+    });
+
+    // Les cartes de la collection et de la boutique penchent vers la souris.
+    document.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const carte = e.target.closest('.carte-type, .carte-skin');
+      if (carte !== Menu.carteSurvolee && Menu.carteSurvolee) Menu.redresserCarte(Menu.carteSurvolee);
+      Menu.carteSurvolee = carte;
+      if (!carte) return;
+      const cadre = carte.getBoundingClientRect();
+      const px = (e.clientX - cadre.left) / cadre.width;
+      const py = (e.clientY - cadre.top) / cadre.height;
+      carte.style.setProperty('--ry', `${(px - 0.5) * 2 * Menu.INCLINAISON_CARTE}deg`);
+      carte.style.setProperty('--rx', `${(0.5 - py) * 2 * Menu.INCLINAISON_CARTE}deg`);
+      carte.style.setProperty('--mx', `${px * 100}%`);
+      carte.style.setProperty('--my', `${py * 100}%`);
+    });
+  },
+
+  redresserCarte(carte) {
+    carte.style.removeProperty('--rx');
+    carte.style.removeProperty('--ry');
+  },
+
+  // Donne à chaque élément son rang ("--i"), pour qu'ils arrivent l'un après l'autre.
+  numeroter(racine) {
+    if (!racine) return;
+    const listes = racine.querySelectorAll('.panneau, .panneau-large, .panneau-niveaux, .grille-cartes');
+    for (const liste of listes) {
+      [...liste.children].forEach((enfant, i) => enfant.style.setProperty('--i', Math.min(i, 14)));
+    }
   },
 
   installerParametres() {
@@ -112,6 +179,7 @@ const Menu = {
   // Les transitions entre écrans viennent du CSS : il suffit de changer la classe "visible".
   montrerEcran(idEcran) {
     Menu.ecranActuel = idEcran;
+    Menu.numeroter(idEcran ? document.getElementById(idEcran) : null);
     for (const ecran of document.querySelectorAll('.ecran')) {
       ecran.classList.toggle('visible', ecran.id === idEcran);
     }

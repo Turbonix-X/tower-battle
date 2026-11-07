@@ -58,7 +58,9 @@ Ce nombre de lignes est rangé par type de tour, car il changera plus tard selon
 ### Arrêter une ligne
 
 - Le joueur coupe une ligne en la barrant d'un trait, à la souris ou au doigt. Les soldats déjà en route continuent.
-- Une ligne s'arrête toute seule si la tour de départ n'a plus de soldats.
+- Une ligne du joueur ne s'arrête jamais toute seule : si la tour de départ tombe à 0 soldat, la ligne reste en place et repart dès que la tour en produit un. Seule une tour qui ne produit rien (une mine) perd sa ligne.
+- Le joueur peut aussi tracer une ligne depuis une de ses tours vide, si elle produit : la ligne partira au premier soldat.
+- Une ligne d'un ordi s'arrête toute seule si la tour de départ n'a plus de soldats.
 
 ### Combats sur une ligne
 
@@ -85,7 +87,7 @@ Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
 - **« Compter double » à l'arrivée :** un attaquant plus fort tue 2 défenseurs. Si la tour est plus forte, il faut 2 attaquants pour tuer 1 défenseur.
 - **PV :** un soldat retire toujours 1 PV, même s'il compte double. Un soldat qui tue le dernier défenseur ne retire pas de PV en plus.
 - **Trop de lignes :** si le niveau baisse, les lignes en trop du joueur (les plus récentes) se mettent en pause et s'affichent plus pâles. Elles repartent si le niveau remonte. Celles d'un ordi disparaissent tout de suite, pour qu'il ne dépasse jamais sa limite.
-- **Ligne impossible :** si la tour n'a plus de place ou plus de soldats, la ligne n'est pas créée et les pointillés du tracé sont rouges.
+- **Ligne impossible :** si la tour n'a plus de place, ou si elle est vide et ne produit rien, la ligne n'est pas créée et les pointillés du tracé sont rouges.
 - **Faire un geste :** un geste qui part d'une de mes tours trace une ligne. Partout ailleurs, il coupe. Seules les lignes du joueur peuvent être coupées.
 
 ### Fin de partie
@@ -107,18 +109,28 @@ Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
 ### Affichage en 3D
 
 - Le jeu est en 3D, sur une île au milieu de la mer. Sur un écran en hauteur, la caméra tourne pour que le joueur soit en bas.
-- Animations : arrivée de la caméra sur la carte, tours qui sortent de terre, soldats qui trottinent, lignes aux chevrons qui avancent, drapeaux, fumée, roue de la mine et feu de camp.
-- Effets : éclairs et étincelles en combat, tour qui tremble sous les coups, colonne de lumière et onde de choc à la capture, secousse de caméra, spirale d'étincelles à l'amélioration, feu d'artifice à la victoire, lumière qui baisse à la défaite.
+- **L'île** a une forme naturelle, différente à chaque niveau : des caps et des baies, des falaises rocheuses en couches (herbe, terre, pierre), une plage de sable, un lagon d'eau claire, de l'écume qui va et vient et quelques rochers dans l'eau. Le décor (sapins, arbres ronds, buissons, rochers, fleurs) suit sa forme.
+- **Les tours** ont des fenêtres éclairées, des portes en arche avec lanternes, des toits à boule dorée et un socle bordé d'or aux couleurs de l'équipe. Chaque type a ses détails : herse et pont-levis pour la forteresse, échelle et toit pour les archers, tonneaux et torches pour le campement, colonnes dorées pour le soin…
+- **Les soldats** ont un visage, une ceinture, des bottes et l'équipement de leur type (casque à crête et bouclier rond, heaume à plumet et cape, lance, longue-vue, bâton…).
+- Animations : arrivée de la caméra sur la carte, tours qui sortent de terre, soldats qui sortent de leur tour en grandissant, marchent en balançant le bras et frappent de l'épée, lignes qui se déroulent depuis leur tour avec des chevrons lumineux, compteurs qui rebondissent, anneau doré qui tourne sous la tour sélectionnée, reflets sur la mer, drapeaux, fumée, roue de la mine et feu de camp.
+- Effets : éclairs et étincelles en combat, poussière quand un soldat tombe, tour qui tremble sous les coups, colonne de lumière et onde de choc à la capture, secousse de caméra, spirale d'étincelles à l'amélioration, feu d'artifice à la victoire, lumière qui baisse à la défaite.
 - Derrière le menu, une vraie bataille se joue toute seule. Elle ne touche pas à la sauvegarde.
 - Les compteurs, points de niveau et barres de PV restent écrits à plat pour être lisibles.
 - Sur un appareil qui peine, la qualité baisse toute seule. Si le navigateur ne sait pas afficher de 3D, un message l'explique.
 
 ### Menu
 
-- **Écran titre** : le nom du jeu, un fond animé avec des petites tours et des soldats qui marchent, et les boutons **Jouer**, **Niveaux**, **Paramètres** et **Crédits** (« Turbonix Entertainment »).
+- **Écran titre** : le nom du jeu, un fond animé avec des petites tours et des soldats qui marchent, et les boutons **Jouer**, **Niveaux**, **Collection**, **Boutique**, **Paramètres** et **Crédits** (« Turbonix Entertainment »).
 - **Jouer** lance le dernier niveau débloqué.
 - **Paramètres** : volume de la musique, volume des effets, vitesse du jeu (×1, ×2), langue (français, anglais).
 - Des transitions en fondu relient les écrans.
+- **Couleurs :** bleu royal et or. Les boutons sont bleus bordés d'or, le bouton principal est doré.
+- **Animations des menus :** titre doré qui arrive en rebondissant puis flotte, avec un reflet qui passe ; rayons dorés et étincelles qui montent ; boutons qui arrivent en basculant, reflet au survol et onde au toucher ; panneaux à bordure dorée qui tourne, dont le contenu arrive élément par élément ; cartes de la Collection et de la Boutique qui arrivent en se retournant et penchent vers la souris ; chemin doré qui coule sur la carte des niveaux ; menu rond qui s'ouvre en tournant.
+- Les animations se calment si le navigateur demande moins de mouvement.
+
+### Précisions choisies pendant le développement (affichage)
+
+- **Forme de l'île :** elle est tirée du numéro du niveau, donc toujours la même pour un niveau. Les baies ne rentrent jamais à moins de 115 d'une tour, pour que chaque tour garde de la terre autour d'elle.
 
 ### Sauvegarde
 

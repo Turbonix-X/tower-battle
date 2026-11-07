@@ -61,12 +61,22 @@ const Vignettes = {
         groupe.add(cristal);
       }
     } else {
+      // Le corps et le bras armé sont des instances, comme en jeu, pour prendre la couleur d'équipe.
       const armure = SKINS_SOLDATS[skin || 'classique'].armure;
-      const corps = new THREE.InstancedMesh(Modeles3D.soldat(type, armure), Modeles3D.materiauSoldat, 1);
-      corps.setMatrixAt(0, new THREE.Matrix4().makeTranslation(0, 8, 0));
-      corps.setColorAt(0, new THREE.Color(couleur));
-      corps.frustumCulled = false;
-      groupe.add(corps);
+      const modele = Modeles3D.soldat(type, armure);
+      const placeCorps = new THREE.Matrix4().makeTranslation(0, 8, 0);
+      const placeBras = placeCorps
+        .clone()
+        .multiply(new THREE.Matrix4().makeTranslation(...modele.epaule))
+        .multiply(new THREE.Matrix4().makeRotationX(-0.45));
+      for (const [geometrie, place] of [[modele.corps, placeCorps], [modele.bras, placeBras]]) {
+        const instance = new THREE.InstancedMesh(geometrie, Modeles3D.materiauSoldat, 1);
+        instance.setMatrixAt(0, place);
+        instance.setColorAt(0, new THREE.Color(couleur));
+        instance.frustumCulled = false;
+        instance.userData.place = place;
+        groupe.add(instance);
+      }
       for (const cote of [-1, 1]) {
         const jambe = new THREE.Mesh(Modeles3D.jambe(), materiau);
         jambe.position.set(cote * 2, 5.5, 0);
@@ -85,7 +95,7 @@ const Vignettes = {
     objet.traverse((morceau) => {
       if (morceau.isInstancedMesh) {
         morceau.geometry.computeBoundingBox();
-        boite.union(morceau.geometry.boundingBox.clone().translate(new THREE.Vector3(0, 8, 0)));
+        boite.union(morceau.geometry.boundingBox.clone().applyMatrix4(morceau.userData.place));
       }
     });
     const sphere = boite.getBoundingSphere(new THREE.Sphere());

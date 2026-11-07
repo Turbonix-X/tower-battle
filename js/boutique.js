@@ -53,5 +53,6 @@ const Boutique = {
     };
     remplir('skins-tours', 'tours', SKINS_TOURS);
     remplir('skins-soldats', 'soldats', SKINS_SOLDATS);
+    Menu.numeroter(document.getElementById('ecran-boutique'));
   },
 };

@@ -84,5 +84,6 @@ const Collection = {
     const debloques = entrees.filter((e) => e.niveau <= Sauvegarde.donnees.niveauAtteint).length;
     document.getElementById('compte-collection').textContent = `${debloques} / ${entrees.length}`;
     document.getElementById('grille-collection').replaceChildren(...entrees.map(Collection.creerCarte));
+    Menu.numeroter(document.getElementById('ecran-collection')); // les cartes arrivent l'une après l'autre
   },
 };

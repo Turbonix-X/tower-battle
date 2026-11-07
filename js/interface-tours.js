@@ -163,6 +163,7 @@ const InterfaceTours = {
 
   debutAppui(tour, x, y) {
     InterfaceTours.annulerAppui();
+    InterfaceTours.cacherFiche(); // la fiche du survol ne reste pas affichée pendant un geste
     if (!tour) return;
     InterfaceTours.minuteur = setTimeout(() => {
       InterfaceTours.ficheParAppui = true;
@@ -190,9 +191,9 @@ const InterfaceTours = {
   survol(tour, x, y) {
     if (InterfaceTours.ficheParAppui) return;
     if (tour === InterfaceTours.tourSurvolee) return;
-    InterfaceTours.tourSurvolee = tour;
     InterfaceTours.annulerAppui();
-    InterfaceTours.cacherFiche();
+    InterfaceTours.cacherFiche(); // remet tourSurvolee à zéro : on la retient seulement après
+    InterfaceTours.tourSurvolee = tour;
     if (!tour) return;
     InterfaceTours.minuteur = setTimeout(() => InterfaceTours.montrerFiche(tour, x, y), InterfaceTours.DELAI_FICHE);
   },

@@ -6,7 +6,7 @@
   <title>Tower Battle</title>
   <!-- Le "?v=" est à changer à chaque version : il oblige le navigateur à reprendre les
        nouveaux fichiers, au lieu de mélanger cette page avec d'anciens scripts gardés en mémoire. -->
-  <link rel="stylesheet" href="css/style.css?v=1.7">
+  <link rel="stylesheet" href="css/style.css?v=1.7.1">
 </head>
 <body class="mode-menu">
   <span id="version" class="texte-version"></span>
@@ -32,11 +32,13 @@
 
   <!-- L'écran titre -->
   <section id="ecran-titre" class="ecran ecran-titre">
+    <div class="particules" aria-hidden="true"></div>
     <div id="bloc-pieces" title="Pièces">
       <span aria-hidden="true">🪙</span> <span id="pieces-titre">0</span>
     </div>
     <div class="contenu-titre">
       <h1><span class="mot-titre">Tower</span> <span class="mot-titre">Battle</span></h1>
+      <div class="ornement" aria-hidden="true"><span></span><b>✦</b><span></span></div>
       <div class="boutons-titre">
         <button id="bouton-jouer" type="button" class="bouton-principal" data-texte="jouer"></button>
         <button id="bouton-niveaux" type="button" data-texte="niveaux"></button>
@@ -148,6 +150,7 @@
   <!-- La présentation d'un nouveau type débloqué -->
   <section id="ecran-deblocage" class="ecran ecran-voile">
     <div class="rayons" aria-hidden="true"></div>
+    <div class="particules" aria-hidden="true"></div>
     <div id="deblocage-contenu" class="panneau panneau-deblocage">
       <p id="deblocage-genre"></p>
       <canvas id="vignette-3d" width="256" height="256" aria-hidden="true"></canvas>
@@ -171,6 +174,8 @@
 
   <!-- La fin de partie -->
   <section id="ecran-fin" class="ecran ecran-voile">
+    <div class="rayons" aria-hidden="true"></div>
+    <div class="particules" aria-hidden="true"></div>
     <div class="panneau panneau-petit">
       <h2 id="fin-titre"></h2>
       <p id="fin-etoiles"></p>
@@ -188,33 +193,33 @@
   </div>
 
   <!-- moteur.js reste en dernier : il lance le jeu quand tout le reste est chargé. -->
-  <script src="js/lib/three.min.js?v=1.7"></script>
-  <script src="js/sauvegarde.js?v=1.7"></script>
-  <script src="js/textes.js?v=1.7"></script>
-  <script src="js/sons.js?v=1.7"></script>
-  <script src="js/donnees-tours.js?v=1.7"></script>
-  <script src="js/donnees-soldats.js?v=1.7"></script>
-  <script src="js/donnees-liens.js?v=1.7"></script>
-  <script src="js/donnees-skins.js?v=1.7"></script>
-  <script src="js/deblocages.js?v=1.7"></script>
-  <script src="js/tours.js?v=1.7"></script>
-  <script src="js/ameliorations.js?v=1.7"></script>
-  <script src="js/soldats.js?v=1.7"></script>
-  <script src="js/lignes.js?v=1.7"></script>
-  <script src="js/tirs.js?v=1.7"></script>
-  <script src="js/ordi.js?v=1.7"></script>
-  <script src="js/generateur.js?v=1.7"></script>
-  <script src="js/tutoriel.js?v=1.7"></script>
-  <script src="js/niveaux.js?v=1.7"></script>
-  <script src="js/modeles3d.js?v=1.7"></script>
-  <script src="js/camera.js?v=1.7"></script>
-  <script src="js/scene3d.js?v=1.7"></script>
-  <script src="js/interface-tours.js?v=1.7"></script>
-  <script src="js/vignettes.js?v=1.7"></script>
-  <script src="js/collection.js?v=1.7"></script>
-  <script src="js/boutique.js?v=1.7"></script>
-  <script src="js/carteniveaux.js?v=1.7"></script>
-  <script src="js/menu.js?v=1.7"></script>
-  <script src="js/moteur.js?v=1.7"></script>
+  <script src="js/lib/three.min.js?v=1.7.1"></script>
+  <script src="js/sauvegarde.js?v=1.7.1"></script>
+  <script src="js/textes.js?v=1.7.1"></script>
+  <script src="js/sons.js?v=1.7.1"></script>
+  <script src="js/donnees-tours.js?v=1.7.1"></script>
+  <script src="js/donnees-soldats.js?v=1.7.1"></script>
+  <script src="js/donnees-liens.js?v=1.7.1"></script>
+  <script src="js/donnees-skins.js?v=1.7.1"></script>
+  <script src="js/deblocages.js?v=1.7.1"></script>
+  <script src="js/tours.js?v=1.7.1"></script>
+  <script src="js/ameliorations.js?v=1.7.1"></script>
+  <script src="js/soldats.js?v=1.7.1"></script>
+  <script src="js/lignes.js?v=1.7.1"></script>
+  <script src="js/tirs.js?v=1.7.1"></script>
+  <script src="js/ordi.js?v=1.7.1"></script>
+  <script src="js/generateur.js?v=1.7.1"></script>
+  <script src="js/tutoriel.js?v=1.7.1"></script>
+  <script src="js/niveaux.js?v=1.7.1"></script>
+  <script src="js/modeles3d.js?v=1.7.1"></script>
+  <script src="js/camera.js?v=1.7.1"></script>
+  <script src="js/scene3d.js?v=1.7.1"></script>
+  <script src="js/interface-tours.js?v=1.7.1"></script>
+  <script src="js/vignettes.js?v=1.7.1"></script>
+  <script src="js/collection.js?v=1.7.1"></script>
+  <script src="js/boutique.js?v=1.7.1"></script>
+  <script src="js/carteniveaux.js?v=1.7.1"></script>
+  <script src="js/menu.js?v=1.7.1"></script>
+  <script src="js/moteur.js?v=1.7.1"></script>
 </body>
 </html>

@@ -37,4 +37,6 @@ Légende : ✅ finie · 🟡 commencée · ⬜ à faire
 
 *Hors liste, fait en version 1.6 : le passage du jeu et du menu en 3D, avec ses animations.*
 
+*Hors liste, fait en version 1.7.1 : des liens du joueur qui ne s'arrêtent plus, des menus bleu et or très animés, des îles aux formes naturelles, de nouveaux dessins de tours et de soldats, et plus d'animations en jeu.*
+
 **Jouer :** https://turbonix-x.github.io/tower-battle/

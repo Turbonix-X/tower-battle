@@ -1,12 +1,31 @@
-/* style.css — L'apparence des pages et des écrans du jeu. */
+/* style.css — L'apparence des pages et des écrans du jeu : bleu royal et or. */
 
 :root {
-  --or: #ffd84d;
-  --or-fonce: #c98a12;
-  --bleu: #2f7bff;
-  --bleu-fonce: #1b56c9;
-  --panneau: rgba(10, 24, 30, 0.72);
-  --contour: rgba(255, 255, 255, 0.2);
+  --or: #ffd76a;
+  --or-vif: #ffc22e;
+  --or-fonce: #b77a0c;
+  --or-clair: #fff3c4;
+  --bleu-nuit: #050f2c;
+  --bleu-profond: #0a1d55;
+  --bleu-roi: #143a9c;
+  --bleu: #2563eb;
+  --bleu-clair: #5b9dff;
+  --bleu-glace: #a9cbff;
+  --verre: rgba(9, 26, 78, 0.8);
+  --verre-fonce: rgba(6, 17, 52, 0.92);
+  --contour: rgba(255, 215, 106, 0.32);
+  --contour-or: rgba(255, 215, 106, 0.7);
+  --degrade-or: linear-gradient(180deg, #fff3c4 0%, #ffd76a 32%, #f3ab1d 72%, #d08a0e 100%);
+  --degrade-bleu: linear-gradient(180deg, #4f8cff 0%, #2459d6 55%, #173a9e 100%);
+  --degrade-panneau: linear-gradient(160deg, rgba(24, 56, 140, 0.92), rgba(7, 20, 62, 0.95));
+  --rebond: cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+/* Pour faire tourner les bordures dorées. */
+@property --angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
 }
 
 html,
@@ -15,7 +34,7 @@ body {
   margin: 0;
   overflow: hidden;
   overscroll-behavior: none;
-  background: #1a4a66;
+  background: var(--bleu-nuit);
   color: #ffffff;
   font-family: system-ui, sans-serif;
 }
@@ -59,10 +78,30 @@ body.mode-menu #barre-haut {
 
 #barre-haut {
   padding: 6px 10px 8px;
-  background: linear-gradient(180deg, rgba(10, 28, 38, 0.98), rgba(14, 40, 52, 0.94));
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(180deg, #0b1f5c, #071541);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 3;
+  animation: barre-arrivee 0.5s var(--rebond) backwards;
+}
+
+/* Un filet doré sous la barre, avec un reflet qui passe. */
+#barre-haut::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--or-fonce), var(--or) 20%, var(--or-clair) 50%, var(--or) 80%, var(--or-fonce));
+  background-size: 200% 100%;
+  animation: reflet-glisse 4s linear infinite;
+}
+
+@keyframes barre-arrivee {
+  from {
+    transform: translateY(-100%);
+  }
 }
 
 #barre-boutons {
@@ -70,7 +109,14 @@ body.mode-menu #barre-haut {
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
-  padding-left: 62px; /* la place du numéro de version */
+  padding-left: 78px; /* la place du numéro de version */
+}
+
+#barre-boutons button {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 #version {
@@ -79,8 +125,9 @@ body.mode-menu #barre-haut {
   left: 10px;
   z-index: 20;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  font-weight: 700;
+  color: var(--or);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
@@ -88,7 +135,7 @@ body.mode-menu #barre-haut {
 
 #info-niveau {
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -98,21 +145,23 @@ body.mode-menu #barre-haut {
 #bloc-or {
   margin-right: auto;
   padding: 3px 10px;
-  border: 1px solid rgba(255, 216, 77, 0.5);
+  border: 1px solid var(--contour-or);
   border-radius: 999px;
-  background: rgba(255, 216, 77, 0.12);
+  background: rgba(255, 215, 106, 0.12);
   color: var(--or);
   font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
+  box-shadow: 0 0 10px rgba(255, 215, 106, 0.2);
 }
 
 #barre-parts {
   display: flex;
   height: 18px;
   overflow: hidden;
-  border-radius: 5px;
-  background: #0d1d13;
+  border: 1px solid rgba(255, 215, 106, 0.45);
+  border-radius: 999px;
+  background: #040b22;
 }
 
 .part {
@@ -127,6 +176,7 @@ body.mode-menu #barre-haut {
   white-space: nowrap;
   color: #ffffff;
   text-shadow: 0 0 3px #000000, 0 0 3px #000000;
+  box-shadow: inset 0 6px 6px -4px rgba(255, 255, 255, 0.5), inset 0 -5px 6px -3px rgba(0, 0, 0, 0.35);
   transition: flex-grow 0.3s ease;
 }
 
@@ -143,22 +193,23 @@ body.mode-menu #barre-haut {
   z-index: 5;
   width: min(560px, calc(100% - 32px));
   box-sizing: border-box;
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 216, 77, 0.6);
-  border-radius: 10px;
-  background: rgba(8, 20, 26, 0.9);
+  padding: 11px 16px;
+  border: 1.5px solid var(--contour-or);
+  border-radius: 14px;
+  background: var(--degrade-panneau);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 215, 106, 0.18);
   font-size: 15px;
   line-height: 1.35;
   text-align: center;
   pointer-events: none;
   opacity: 0;
-  transform: translate(-50%, 10px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transform: translate(-50%, 20px) scale(0.92);
+  transition: opacity 0.3s ease, transform 0.45s var(--rebond);
 }
 
 #bulle-tutoriel.visible {
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform: translate(-50%, 0) scale(1);
 }
 
 /* --- Le menu rond d'amélioration --- */
@@ -173,6 +224,28 @@ body.mode-menu #barre-haut {
 
 #roue.visible {
   visibility: visible;
+}
+
+/* Un halo doré qui tourne autour de la tour pendant que le menu est ouvert. */
+#roue::before {
+  content: '';
+  position: absolute;
+  left: -70px;
+  top: -70px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 215, 106, 0.55);
+  opacity: 0;
+  transform: scale(0.3) rotate(0deg);
+  transition: opacity 0.25s ease, transform 0.4s var(--rebond);
+  pointer-events: none;
+}
+
+#roue.visible::before {
+  opacity: 1;
+  transform: scale(1);
+  animation: tourne 9s linear infinite;
 }
 
 .roue-bouton {
@@ -191,29 +264,41 @@ body.mode-menu #barre-haut {
   box-sizing: border-box;
   border: 2px solid var(--or);
   border-radius: 50%;
-  background: rgba(10, 24, 30, 0.94);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  background: radial-gradient(circle at 50% 30%, #2552c4, #0b1f5c 70%);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55), 0 0 14px rgba(255, 215, 106, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.25);
   font-size: 11px;
   line-height: 1.15;
   opacity: 0;
-  transform: translate(0, 0) scale(0.2);
-  transition: transform 0.28s cubic-bezier(0.2, 1.5, 0.4, 1), opacity 0.18s ease, background 0.15s ease;
+  transform: translate(0, 0) scale(0.2) rotate(-200deg);
+  transition: transform 0.45s var(--rebond), opacity 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.roue-bouton:nth-child(2) {
+  transition-delay: 0.05s;
+}
+
+.roue-bouton:nth-child(3) {
+  transition-delay: 0.1s;
 }
 
 #roue.visible .roue-bouton {
   opacity: 1;
-  transform: translate(var(--x), var(--y)) scale(1);
+  transform: translate(var(--x), var(--y)) scale(1) rotate(0deg);
 }
 
 #roue.visible .roue-bouton:hover:not(:disabled) {
-  background: rgba(40, 70, 90, 0.97);
-  transform: translate(var(--x), var(--y)) scale(1.08);
+  background: radial-gradient(circle at 50% 30%, #3a6ef0, #12307e 70%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 26px rgba(255, 215, 106, 0.75), inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  transform: translate(var(--x), var(--y)) scale(1.1);
+  transition-delay: 0s;
 }
 
 .roue-bouton:disabled {
   opacity: 1 !important;
-  border-color: rgba(255, 255, 255, 0.28);
-  color: rgba(255, 255, 255, 0.72);
+  border-color: rgba(169, 203, 255, 0.35);
+  background: radial-gradient(circle at 50% 30%, #1d3270, #0a1638 70%);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .roue-icone {
@@ -226,7 +311,7 @@ body.mode-menu #barre-haut {
 }
 
 .roue-effet {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--bleu-glace);
 }
 
 .roue-points {
@@ -240,6 +325,7 @@ body.mode-menu #barre-haut {
   color: var(--or);
   font-size: 13px;
   font-weight: 800;
+  text-shadow: 0 0 8px rgba(255, 194, 46, 0.6);
 }
 
 /* --- La fiche d'info --- */
@@ -250,15 +336,16 @@ body.mode-menu #barre-haut {
   width: 220px;
   box-sizing: border-box;
   padding: 10px 12px;
-  border: 1px solid var(--contour);
-  border-radius: 10px;
-  background: rgba(8, 20, 26, 0.95);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  border: 1.5px solid var(--contour-or);
+  border-radius: 12px;
+  background: var(--degrade-panneau);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55), 0 0 16px rgba(255, 215, 106, 0.15);
   pointer-events: none;
   visibility: hidden;
   opacity: 0;
-  transform: translateY(5px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  transform: translateY(8px) scale(0.94);
+  transform-origin: left center;
+  transition: opacity 0.18s ease, transform 0.3s var(--rebond), visibility 0.18s;
 }
 
 #fiche.visible {
@@ -277,7 +364,7 @@ body.mode-menu #barre-haut {
   margin: 0 0 8px;
   font-size: 12px;
   line-height: 1.3;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--bleu-glace);
 }
 
 .fiche-lignes div {
@@ -286,30 +373,60 @@ body.mode-menu #barre-haut {
   gap: 8px;
   font-size: 12px;
   line-height: 1.5;
+  border-bottom: 1px solid rgba(169, 203, 255, 0.1);
 }
 
 /* --- Les boutons --- */
 
 button {
+  position: relative;
+  overflow: hidden;
   min-height: 36px;
   padding: 6px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  background: rgba(38, 66, 80, 0.92);
+  border: 1px solid rgba(255, 215, 106, 0.45);
+  border-radius: 10px;
+  background: var(--degrade-bleu);
   color: #ffffff;
   font: inherit;
   font-size: 14px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 3px 0 #0b245f, 0 6px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.18s var(--rebond), box-shadow 0.2s ease, filter 0.2s ease, border-color 0.2s ease;
+}
+
+/* Le reflet qui traverse le bouton au survol. */
+button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: skewX(-20deg) translateX(0);
+  pointer-events: none;
+  opacity: 0;
+}
+
+button:hover:not(:disabled)::after {
+  opacity: 1;
+  animation: reflet-bouton 0.7s ease;
 }
 
 button:hover:not(:disabled) {
-  background: rgba(58, 96, 112, 0.97);
-  transform: translateY(-1px);
+  filter: brightness(1.12);
+  border-color: var(--or);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 #0b245f, 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 16px rgba(255, 215, 106, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 button:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: translateY(2px) scale(0.97);
+  box-shadow: 0 1px 0 #0b245f, 0 3px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition-duration: 0.06s;
 }
 
 button:focus-visible {
@@ -318,32 +435,104 @@ button:focus-visible {
 }
 
 button:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: default;
+  filter: saturate(0.6);
 }
 
 button[hidden] {
   display: none;
 }
 
+@keyframes reflet-bouton {
+  from {
+    transform: skewX(-20deg) translateX(0);
+  }
+  to {
+    transform: skewX(-20deg) translateX(420%);
+  }
+}
+
+/* L'onde qui part du doigt quand on appuie (ajoutée par menu.js). */
+.onde {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: rgba(255, 243, 196, 0.55);
+  pointer-events: none;
+  animation: onde 0.6s ease-out forwards;
+}
+
+@keyframes onde {
+  from {
+    transform: scale(0);
+    opacity: 1;
+  }
+  to {
+    transform: scale(22);
+    opacity: 0;
+  }
+}
+
+/* Le bouton principal est doré, et il respire doucement. */
 .bouton-principal {
-  border-color: rgba(255, 255, 255, 0.45);
-  background: linear-gradient(180deg, #4b93ff, var(--bleu-fonce));
-  font-weight: 800;
-  box-shadow: 0 4px 0 #123c8f, 0 8px 18px rgba(0, 0, 0, 0.35);
+  border: 1px solid #fff3c4;
+  background: var(--degrade-or);
+  color: #0a1d55;
+  font-weight: 900;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 0 #8a5806, 0 8px 20px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.7);
+  animation: respire 2.4s ease-in-out infinite;
 }
 
 .bouton-principal:hover:not(:disabled) {
-  background: linear-gradient(180deg, #62a2ff, #2563d6);
+  border-color: #ffffff;
+  box-shadow: 0 6px 0 #8a5806, 0 12px 26px rgba(0, 0, 0, 0.45), 0 0 30px rgba(255, 215, 106, 0.8),
+    inset 0 2px 0 rgba(255, 255, 255, 0.7);
+}
+
+.bouton-principal:active:not(:disabled) {
+  box-shadow: 0 1px 0 #8a5806, 0 3px 8px rgba(0, 0, 0, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Sur le bouton doré, le reflet passe tout seul de temps en temps. */
+.bouton-principal::after {
+  opacity: 1;
+  animation: reflet-repos 3.2s ease 1.2s infinite;
+}
+
+.bouton-principal:hover:not(:disabled)::after {
+  animation: reflet-repos 1.4s ease infinite;
+}
+
+@keyframes reflet-repos {
+  0% {
+    transform: skewX(-20deg) translateX(0);
+  }
+  35%,
+  100% {
+    transform: skewX(-20deg) translateX(420%);
+  }
+}
+
+@keyframes respire {
+  50% {
+    box-shadow: 0 4px 0 #8a5806, 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 26px rgba(255, 215, 106, 0.65),
+      inset 0 2px 0 rgba(255, 255, 255, 0.7);
+  }
 }
 
 .bouton-danger {
-  border-color: #e5383b;
-  background: rgba(90, 31, 34, 0.92);
+  border-color: #ff6b6b;
+  background: linear-gradient(180deg, #c8333b, #7a161d);
+  box-shadow: 0 3px 0 #4a0c10, 0 6px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .bouton-danger:hover:not(:disabled) {
-  background: rgba(122, 40, 44, 0.97);
+  border-color: #ffb3b3;
+  box-shadow: 0 5px 0 #4a0c10, 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 16px rgba(255, 107, 107, 0.45);
 }
 
 /* --- Les écrans et leurs transitions --- */
@@ -359,10 +548,11 @@ button[hidden] {
   padding: 16px;
   box-sizing: border-box;
   text-align: center;
+  perspective: 1200px;
   visibility: hidden;
   opacity: 0;
-  transform: scale(1.03);
-  transition: opacity 0.35s ease, transform 0.35s ease, visibility 0.35s;
+  transform: scale(1.06);
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1), visibility 0.4s;
 }
 
 .ecran.visible {
@@ -372,17 +562,19 @@ button[hidden] {
 }
 
 .ecran-flou {
-  background: rgba(6, 22, 32, 0.55);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
+  background: radial-gradient(ellipse at 50% 0%, rgba(37, 99, 235, 0.35), transparent 60%),
+    linear-gradient(180deg, rgba(5, 15, 44, 0.6), rgba(5, 15, 44, 0.82));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .ecran-voile {
-  background: rgba(6, 18, 26, 0.5);
+  background: radial-gradient(ellipse at center, rgba(10, 29, 85, 0.45), rgba(5, 15, 44, 0.78));
 }
 
 .ecran-defilant {
   justify-content: flex-start;
+  overflow-x: hidden;
   overflow-y: auto;
   padding-top: 36px; /* la place du numéro de version */
 }
@@ -395,7 +587,12 @@ button[hidden] {
 
 .ecran h2 {
   font-size: 32px;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  font-weight: 900;
+  background: var(--degrade-or);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 #0a1d55) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
 }
 
 .ecran-boutons {
@@ -405,32 +602,168 @@ button[hidden] {
   gap: 12px;
 }
 
+/* Quand un écran s'ouvre, son panneau arrive en basculant, puis son contenu, élément par élément.
+   "--i" est le rang de chaque élément, donné par menu.js. */
+.ecran.visible :is(.panneau, .panneau-large, .panneau-niveaux) {
+  animation: panneau-entree 0.6s var(--rebond) backwards;
+}
+
+.ecran.visible :is(.panneau, .panneau-large, .panneau-niveaux) > * {
+  animation: element-entree 0.5s var(--rebond) backwards;
+  animation-delay: calc(0.12s + var(--i, 0) * 0.055s);
+}
+
+.ecran.visible .grille-cartes > * {
+  animation: carte-entree 0.6s var(--rebond) backwards;
+  animation-delay: calc(0.22s + var(--i, 0) * 0.05s);
+}
+
+@keyframes panneau-entree {
+  from {
+    opacity: 0;
+    transform: translateY(50px) scale(0.9) rotateX(14deg);
+  }
+}
+
+@keyframes element-entree {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+}
+
+@keyframes carte-entree {
+  from {
+    opacity: 0;
+    transform: perspective(800px) translateY(30px) rotateY(-70deg) scale(0.8);
+  }
+}
+
+/* --- Les étincelles qui flottent (créées par menu.js) --- */
+
+.particules {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.etincelle {
+  position: absolute;
+  left: var(--x);
+  bottom: -20px;
+  width: var(--taille);
+  height: var(--taille);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffbe6 0%, var(--couleur) 45%, transparent 72%);
+  opacity: 0;
+  animation: etincelle-monte var(--duree) linear var(--retard) infinite;
+}
+
+@keyframes etincelle-monte {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(var(--balance), -55vh) scale(1);
+  }
+  85% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, -110vh) scale(0.4);
+  }
+}
+
 /* --- L'écran titre : la bataille en 3D se joue derrière --- */
 
 .ecran-titre {
-  background: radial-gradient(ellipse at center, rgba(6, 22, 32, 0) 35%, rgba(6, 22, 32, 0.6) 100%);
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 42%, rgba(10, 29, 85, 0) 30%, rgba(5, 15, 44, 0.78) 100%);
+}
+
+/* Des rayons dorés qui tournent lentement derrière le titre. */
+.ecran-titre::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 170vmax;
+  height: 170vmax;
+  margin: -85vmax 0 0 -85vmax;
+  background: repeating-conic-gradient(rgba(255, 215, 106, 0.09) 0deg 9deg, transparent 9deg 18deg);
+  -webkit-mask-image: radial-gradient(circle, #000000 0%, transparent 45%);
+  mask-image: radial-gradient(circle, #000000 0%, transparent 45%);
+  animation: tourne 60s linear infinite;
+  pointer-events: none;
+}
+
+/* Une lueur bleue qui monte du bas. */
+.ecran-titre::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 45%;
+  background: linear-gradient(0deg, rgba(37, 99, 235, 0.35), transparent);
+  pointer-events: none;
+}
+
+@keyframes tourne {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 #bloc-pieces {
   position: absolute;
   top: 12px;
   right: 14px;
+  z-index: 1;
   padding: 6px 14px;
-  border: 1px solid rgba(255, 216, 77, 0.6);
+  border: 1.5px solid var(--contour-or);
   border-radius: 999px;
-  background: var(--panneau);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: var(--degrade-panneau);
+  box-shadow: 0 0 16px rgba(255, 215, 106, 0.3);
   color: var(--or);
   font-size: 18px;
   font-weight: 800;
+  animation: tombe 0.7s var(--rebond) 0.3s backwards;
+}
+
+#bloc-pieces > span:first-child {
+  display: inline-block;
+  animation: piece-tourne 3s ease-in-out infinite;
+}
+
+@keyframes piece-tourne {
+  0%,
+  70% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+@keyframes tombe {
+  from {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
 }
 
 .contenu-titre {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 30px;
+  gap: 22px;
 }
 
 .contenu-titre h1 {
@@ -438,28 +771,30 @@ button[hidden] {
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: 0.01em;
-  filter: drop-shadow(0 5px 0 #6b3f08) drop-shadow(0 12px 22px rgba(0, 0, 0, 0.65));
+  filter: drop-shadow(0 5px 0 #0a1d55) drop-shadow(0 0 2px #0a1d55) drop-shadow(0 14px 26px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 0 30px rgba(255, 194, 46, 0.35));
+  animation: flotte 5s ease-in-out 1.2s infinite;
 }
 
 .mot-titre {
   display: inline-block;
   padding: 0 0.03em;
-  background: linear-gradient(100deg, #fff4bf 0%, #ffd84d 28%, #f2a51d 50%, #fff4bf 58%, #ffd84d 75%, #ee9b13 100%);
+  background: linear-gradient(100deg, #fff3c4 0%, #ffd76a 28%, #f0a01a 50%, #ffffff 56%, #ffd76a 70%, #e8930f 100%);
   background-size: 260% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: titre-arrivee 0.9s cubic-bezier(0.2, 1.5, 0.4, 1) backwards, titre-reflet 5s linear 1s infinite;
+  animation: titre-arrivee 1s cubic-bezier(0.2, 1.6, 0.4, 1) backwards, titre-reflet 4.5s linear 1s infinite;
 }
 
 .mot-titre:nth-child(2) {
-  animation-delay: 0.16s, 1s;
+  animation-delay: 0.18s, 1.2s;
 }
 
 @keyframes titre-arrivee {
   from {
     opacity: 0;
-    transform: translateY(-60px) scale(0.7) rotate(-5deg);
+    transform: translateY(-90px) scale(0.5) rotate(-8deg);
   }
 }
 
@@ -472,11 +807,55 @@ button[hidden] {
   }
 }
 
+@keyframes flotte {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Le petit ornement sous le titre : deux traits dorés qui s'étirent et une étoile qui tourne. */
+.ornement {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(360px, 80vw);
+  margin-top: -6px;
+  color: var(--or);
+  font-size: 20px;
+  text-shadow: 0 0 12px rgba(255, 215, 106, 0.9);
+}
+
+.ornement span {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--or));
+  transform-origin: right center;
+  animation: trait-etire 0.8s ease 0.6s backwards;
+}
+
+.ornement span:last-child {
+  background: linear-gradient(270deg, transparent, var(--or));
+  transform-origin: left center;
+}
+
+.ornement b {
+  display: inline-block;
+  font-weight: 400;
+  animation: element-entree 0.5s var(--rebond) 0.9s backwards, tourne 6s linear 1.4s infinite;
+}
+
+@keyframes trait-etire {
+  from {
+    transform: scaleX(0);
+  }
+}
+
 .boutons-titre {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   width: min(380px, 88vw);
+  perspective: 900px;
 }
 
 .boutons-titre .bouton-principal,
@@ -486,50 +865,41 @@ button[hidden] {
 
 .boutons-titre button {
   min-height: 50px;
-  border-radius: 12px;
+  border-radius: 14px;
   font-size: 18px;
-  font-weight: 700;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  animation: bouton-arrivee 0.5s ease backwards;
-}
-
-.boutons-titre button:not(.bouton-principal) {
-  background: var(--panneau);
-  border-color: rgba(255, 255, 255, 0.28);
-}
-
-.boutons-titre button:not(.bouton-principal):hover {
-  background: rgba(32, 62, 76, 0.86);
-  border-color: var(--or);
-}
-
-.boutons-titre button:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.03);
+  font-weight: 800;
+  animation: bouton-arrivee 0.7s var(--rebond) backwards;
 }
 
 .boutons-titre .bouton-principal {
-  min-height: 60px;
-  font-size: 23px;
+  min-height: 62px;
+  font-size: 24px;
+  letter-spacing: 0.03em;
+  animation: bouton-arrivee 0.7s var(--rebond) 0.45s backwards, respire 2.4s ease-in-out 1.2s infinite;
 }
 
-.boutons-titre button:nth-child(1) { animation-delay: 0.45s; }
+.boutons-titre button:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.04);
+}
+
 .boutons-titre button:nth-child(2) { animation-delay: 0.55s; }
-.boutons-titre button:nth-child(3) { animation-delay: 0.65s; }
-.boutons-titre button:nth-child(4) { animation-delay: 0.75s; }
-.boutons-titre button:nth-child(5) { animation-delay: 0.85s; }
-.boutons-titre button:nth-child(6) { animation-delay: 0.95s; }
+.boutons-titre button:nth-child(3) { animation-delay: 0.62s; }
+.boutons-titre button:nth-child(4) { animation-delay: 0.69s; }
+.boutons-titre button:nth-child(5) { animation-delay: 0.76s; }
+.boutons-titre button:nth-child(6) { animation-delay: 0.83s; }
 
 @keyframes bouton-arrivee {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(30px) rotateX(-85deg) scale(0.9);
   }
 }
 
 /* --- Les panneaux --- */
 
+/* Une bordure dorée et bleue qui tourne doucement tout autour. */
 .panneau {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -537,12 +907,24 @@ button[hidden] {
   margin: auto;
   padding: 24px;
   box-sizing: border-box;
-  border: 1px solid var(--contour);
-  border-radius: 16px;
-  background: var(--panneau);
+  border: 2px solid transparent;
+  border-radius: 20px;
+  background: var(--degrade-panneau) padding-box,
+    conic-gradient(from var(--angle), #ffd76a, #1d4fd8 22%, #fff3c4 50%, #1d4fd8 78%, #ffd76a) border-box;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55), 0 0 30px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  animation: bordure-tourne 7s linear infinite;
+}
+
+@keyframes bordure-tourne {
+  to {
+    --angle: 360deg;
+  }
+}
+
+.ecran.visible .panneau {
+  animation: panneau-entree 0.6s var(--rebond) backwards, bordure-tourne 7s linear infinite;
 }
 
 .panneau button {
@@ -557,26 +939,44 @@ button[hidden] {
 
 .version-menu {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.72);
+  font-weight: 700;
+  color: var(--bleu-glace);
 }
 
 .nom-studio {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--or);
+  font-size: 26px;
+  font-weight: 900;
+  background: linear-gradient(100deg, #fff3c4, #ffd76a 40%, #ffffff 50%, #ffd76a 60%, #e8930f);
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: titre-reflet 3.5s linear infinite;
 }
 
 /* --- La fin de partie --- */
 
+#ecran-fin .rayons {
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+#ecran-fin.fin-defaite .rayons,
+#ecran-fin.fin-defaite .particules {
+  opacity: 0;
+}
+
 #fin-titre {
-  font-size: 40px;
+  font-size: 44px;
   font-weight: 900;
-  color: var(--or);
-  animation: fin-arrivee 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) backwards;
+  animation: fin-arrivee 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) backwards, lueur-or 2s ease-in-out 0.8s infinite;
 }
 
 .fin-defaite #fin-titre {
-  color: #ff8d80;
+  background: linear-gradient(180deg, #ffd0c9, #ff7a6b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: fin-arrivee 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) backwards, secoue 0.5s ease 0.7s;
 }
 
 .ecran:not(.visible) #fin-titre,
@@ -587,7 +987,24 @@ button[hidden] {
 @keyframes fin-arrivee {
   from {
     opacity: 0;
-    transform: scale(0.4);
+    transform: scale(0.3) rotate(-10deg);
+  }
+}
+
+@keyframes lueur-or {
+  50% {
+    filter: drop-shadow(0 2px 0 #0a1d55) drop-shadow(0 0 18px rgba(255, 215, 106, 0.95));
+  }
+}
+
+@keyframes secoue {
+  20%,
+  60% {
+    transform: translateX(-8px) rotate(-2deg);
+  }
+  40%,
+  80% {
+    transform: translateX(8px) rotate(2deg);
   }
 }
 
@@ -595,9 +1012,9 @@ button[hidden] {
   display: flex;
   justify-content: center;
   gap: 6px;
-  font-size: 46px;
+  font-size: 50px;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(169, 203, 255, 0.35);
 }
 
 #fin-etoiles[hidden],
@@ -606,22 +1023,28 @@ button[hidden] {
 }
 
 .etoile-gagnee {
+  display: inline-block;
   color: var(--or);
-  text-shadow: 0 0 14px rgba(255, 216, 77, 0.8);
-  animation: etoile-arrivee 0.5s cubic-bezier(0.2, 1.8, 0.4, 1) backwards;
+  text-shadow: 0 0 16px rgba(255, 215, 106, 0.9), 0 0 4px #ffffff;
+  animation: etoile-arrivee 0.6s cubic-bezier(0.2, 1.8, 0.4, 1) backwards;
 }
 
 @keyframes etoile-arrivee {
   from {
     opacity: 0;
-    transform: scale(2.6) rotate(-40deg);
+    transform: scale(3) rotate(-120deg);
   }
+}
+
+#fin-temps {
+  color: var(--bleu-glace);
 }
 
 #fin-pieces {
   color: var(--or);
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 800;
+  text-shadow: 0 0 10px rgba(255, 215, 106, 0.6);
 }
 
 /* --- Les paramètres --- */
@@ -632,11 +1055,12 @@ button[hidden] {
   gap: 6px;
   text-align: left;
   font-size: 15px;
+  font-weight: 600;
 }
 
 .reglage input {
   width: 100%;
-  accent-color: var(--or);
+  accent-color: var(--or-vif);
 }
 
 .choix {
@@ -649,9 +1073,12 @@ button[hidden] {
 }
 
 .choix button.actif {
-  border-color: transparent;
-  background: linear-gradient(180deg, #4b93ff, var(--bleu-fonce));
-  font-weight: 800;
+  border-color: #fff3c4;
+  background: var(--degrade-or);
+  color: #0a1d55;
+  font-weight: 900;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: 0 3px 0 #8a5806, 0 0 16px rgba(255, 215, 106, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.6);
 }
 
 #confirmation {
@@ -659,8 +1086,10 @@ button[hidden] {
   flex-direction: column;
   gap: 12px;
   padding: 12px;
-  border-radius: 10px;
-  background: rgba(90, 31, 34, 0.55);
+  border: 1px solid rgba(255, 107, 107, 0.5);
+  border-radius: 12px;
+  background: rgba(90, 20, 30, 0.55);
+  animation: element-entree 0.4s var(--rebond);
 }
 
 #confirmation[hidden] {
@@ -688,7 +1117,7 @@ button[hidden] {
 
 .entete-niveaux h2 {
   flex: 1;
-  font-size: 22px;
+  font-size: 24px;
   text-align: right;
 }
 
@@ -702,6 +1131,10 @@ button[hidden] {
   position: relative;
   height: 860px;
   flex-shrink: 0;
+  border: 1.5px solid var(--contour);
+  border-radius: 22px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(37, 99, 235, 0.3), transparent 70%), rgba(6, 17, 52, 0.55);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4);
 }
 
 .chemin {
@@ -717,16 +1150,26 @@ button[hidden] {
 }
 
 .chemin-complet {
-  stroke: rgba(255, 255, 255, 0.3);
+  stroke: rgba(169, 203, 255, 0.35);
   stroke-width: 6;
   stroke-dasharray: 2 10;
   stroke-linecap: round;
 }
 
+/* Le chemin déjà parcouru est doré, et de la lumière y coule. */
 .chemin-atteint {
   stroke: var(--or);
   stroke-width: 5;
-  filter: drop-shadow(0 0 4px rgba(255, 216, 77, 0.8));
+  stroke-dasharray: 14 8;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 5px rgba(255, 215, 106, 0.9));
+  animation: chemin-coule 1.2s linear infinite;
+}
+
+@keyframes chemin-coule {
+  to {
+    stroke-dashoffset: -22;
+  }
 }
 
 .noeud {
@@ -740,28 +1183,33 @@ button[hidden] {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 2px solid #ffffff;
+  overflow: visible;
+  border: 2px solid var(--or);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #71adff, var(--bleu-fonce));
-  box-shadow: 0 4px 0 #123c8f, 0 7px 12px rgba(0, 0, 0, 0.4);
-  animation: noeud-apparait 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) backwards;
+  background: radial-gradient(circle at 35% 30%, #6ea6ff, #1d4fd8 55%, #0d2a7a);
+  box-shadow: 0 4px 0 #0b245f, 0 7px 14px rgba(0, 0, 0, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  animation: noeud-apparait 0.45s var(--rebond) backwards;
+}
+
+.noeud::after {
+  display: none;
 }
 
 .noeud:hover:not(:disabled) {
-  background: radial-gradient(circle at 35% 30%, #8fbfff, #2a6ce0);
-  transform: scale(1.12);
+  background: radial-gradient(circle at 35% 30%, #9cc4ff, #2e63e8 55%, #12348f);
+  transform: scale(1.16);
 }
 
 @keyframes noeud-apparait {
   from {
     opacity: 0;
-    transform: scale(0.3);
+    transform: scale(0.2) rotate(-90deg);
   }
 }
 
 .noeud-numero {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 900;
   line-height: 1.1;
 }
 
@@ -770,41 +1218,62 @@ button[hidden] {
   line-height: 1;
   color: var(--or);
   letter-spacing: -1px;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
 }
 
+/* Le prochain niveau : un anneau doré qui pulse et un halo en pointillés qui tourne. */
 .noeud-actuel {
-  border-color: var(--or);
-  animation: noeud-apparait 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) backwards, noeud-pulse 1.5s ease-in-out infinite;
+  background: var(--degrade-or);
+  border-color: #ffffff;
+  color: #0a1d55;
+  text-shadow: none;
+  animation: noeud-apparait 0.45s var(--rebond) backwards, noeud-pulse 1.5s ease-in-out infinite;
+}
+
+.noeud-actuel::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border: 2px dashed var(--or);
+  border-radius: 50%;
+  animation: tourne 6s linear infinite;
+  pointer-events: none;
+}
+
+.noeud-actuel .noeud-etoiles {
+  color: #0a1d55;
+  text-shadow: none;
 }
 
 @keyframes noeud-pulse {
   50% {
-    box-shadow: 0 4px 0 #123c8f, 0 0 0 9px rgba(255, 216, 77, 0.35), 0 0 18px rgba(255, 216, 77, 0.7);
+    box-shadow: 0 4px 0 #8a5806, 0 0 0 9px rgba(255, 215, 106, 0.3), 0 0 26px rgba(255, 215, 106, 0.85);
   }
 }
 
-.noeud-verrouille {
-  background: rgba(45, 60, 66, 0.92);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: none;
+.noeud.noeud-verrouille {
+  background: radial-gradient(circle at 35% 30%, #2a3a66, #121c3c);
+  border-color: rgba(169, 203, 255, 0.3);
+  box-shadow: 0 3px 0 #070f26;
   opacity: 1;
+  filter: none;
 }
 
 .noeud-verrouille .noeud-numero {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(169, 203, 255, 0.55);
 }
 
 .noeud-boss {
   width: 66px;
   height: 66px;
   margin: -33px 0 0 -33px;
-  background: radial-gradient(circle at 35% 30%, #d6463f, #6e1417);
+  background: radial-gradient(circle at 35% 30%, #e0544c, #8a1a1f 60%, #4d0b0e);
   border-color: var(--or);
-  box-shadow: 0 4px 0 #4a0c0e, 0 7px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 4px 0 #3a0809, 0 7px 16px rgba(0, 0, 0, 0.5), 0 0 16px rgba(255, 215, 106, 0.4);
 }
 
-.noeud-boss.noeud-verrouille {
-  background: rgba(74, 38, 40, 0.92);
+.noeud.noeud-boss.noeud-verrouille {
+  background: radial-gradient(circle at 35% 30%, #5a2c38, #2a1220);
 }
 
 .noeud-boss .noeud-numero::before {
@@ -820,9 +1289,10 @@ button[hidden] {
   left: 50%;
   top: 44px;
   transform: translateX(-50%);
-  padding: 1px 8px;
+  padding: 1px 9px;
+  border: 1px solid var(--contour-or);
   border-radius: 999px;
-  background: rgba(10, 24, 30, 0.9);
+  background: var(--verre-fonce);
   color: var(--or);
   font-size: 12px;
   font-weight: 800;
@@ -840,13 +1310,14 @@ button[hidden] {
   top: 108px;
   display: flex;
   gap: 6px;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(10px);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s ease 0.12s, transform 0.4s var(--rebond) 0.12s;
 }
 
 #roue.visible #roue-soldats {
   opacity: 1;
+  transform: translateX(-50%);
 }
 
 .choix-soldat {
@@ -854,17 +1325,17 @@ button[hidden] {
   height: 40px;
   min-height: 0;
   padding: 0;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(169, 203, 255, 0.5);
   border-radius: 50%;
-  background: rgba(10, 24, 30, 0.94);
+  background: radial-gradient(circle at 50% 30%, #2552c4, #0b1f5c 70%);
   font-size: 18px;
   line-height: 1;
 }
 
 .choix-soldat.actif {
   border-color: var(--or);
-  background: rgba(70, 58, 14, 0.96);
-  box-shadow: 0 0 10px rgba(255, 216, 77, 0.7);
+  background: radial-gradient(circle at 50% 30%, #ffe9a3, #d89a18 75%);
+  box-shadow: 0 0 14px rgba(255, 215, 106, 0.85);
 }
 
 /* --- La collection et la boutique --- */
@@ -879,7 +1350,9 @@ button[hidden] {
 
 .panneau-large h3 {
   margin: 8px 0 0;
-  font-size: 18px;
+  font-size: 19px;
+  color: var(--or);
+  text-shadow: 0 0 12px rgba(255, 215, 106, 0.4);
 }
 
 .panneau-large .choix {
@@ -892,44 +1365,71 @@ button[hidden] {
 
 #compte-collection {
   margin-left: auto;
+  padding: 3px 12px;
+  border: 1px solid var(--contour-or);
+  border-radius: 999px;
+  background: var(--verre-fonce);
   color: var(--or);
   font-weight: 800;
 }
 
 .bloc-pieces-petit {
   padding: 4px 12px;
-  border: 1px solid rgba(255, 216, 77, 0.6);
+  border: 1.5px solid var(--contour-or);
   border-radius: 999px;
-  background: var(--panneau);
+  background: var(--degrade-panneau);
   color: var(--or);
   font-weight: 800;
   white-space: nowrap;
+  box-shadow: 0 0 12px rgba(255, 215, 106, 0.25);
 }
 
 .grille-cartes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 12px;
+  gap: 14px;
+  perspective: 1000px;
 }
 
+/* Les cartes penchent vers la souris ("--rx" et "--ry" viennent de menu.js),
+   et un reflet doré suit le pointeur. */
 .carte-type,
 .carte-skin {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 12px;
-  border: 1px solid var(--contour);
-  border-radius: 12px;
-  background: var(--panneau);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  border: 1.5px solid var(--contour);
+  border-radius: 16px;
+  background: var(--degrade-panneau);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transform: perspective(800px) translateY(var(--ty, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease;
+}
+
+.carte-type::before,
+.carte-skin::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(255, 233, 160, 0.28), transparent 55%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
 }
 
 .carte-type:hover,
 .carte-skin:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 216, 77, 0.6);
+  --ty: -6px;
+  border-color: var(--or);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 215, 106, 0.35);
+}
+
+.carte-type:hover::before,
+.carte-skin:hover::before {
+  opacity: 1;
 }
 
 .carte-type img,
@@ -937,6 +1437,13 @@ button[hidden] {
   align-self: center;
   width: 120px;
   height: 120px;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45));
+  transition: transform 0.35s var(--rebond);
+}
+
+.carte-type:hover img,
+.carte-skin:hover img {
+  transform: scale(1.12) translateY(-4px);
 }
 
 .carte-type h3,
@@ -951,7 +1458,7 @@ button[hidden] {
   margin: 0;
   font-size: 12px;
   line-height: 1.35;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--bleu-glace);
 }
 
 .carte-type dl {
@@ -963,11 +1470,12 @@ button[hidden] {
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
+  border-bottom: 1px solid rgba(169, 203, 255, 0.1);
 }
 
 .carte-type dt {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--bleu-glace);
 }
 
 .carte-type dd {
@@ -977,11 +1485,11 @@ button[hidden] {
 }
 
 .carte-verrouillee img {
-  filter: grayscale(1) brightness(0.45);
+  filter: grayscale(1) brightness(0.4) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45));
 }
 
 .carte-verrouillee h3 {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(169, 203, 255, 0.55);
 }
 
 .cadenas {
@@ -990,9 +1498,18 @@ button[hidden] {
   font-size: 14px !important;
 }
 
+/* Le skin porté : une bordure dorée qui tourne. */
 .carte-equipee {
-  border-color: var(--or);
-  box-shadow: 0 0 14px rgba(255, 216, 77, 0.35);
+  border: 2px solid transparent;
+  background: var(--degrade-panneau) padding-box,
+    conic-gradient(from var(--angle), #ffd76a, #1d4fd8 25%, #fff3c4 50%, #1d4fd8 75%, #ffd76a) border-box;
+  box-shadow: 0 0 22px rgba(255, 215, 106, 0.4);
+  animation: bordure-tourne 4s linear infinite;
+}
+
+.ecran.visible .grille-cartes > .carte-equipee {
+  animation: carte-entree 0.6s var(--rebond) backwards, bordure-tourne 4s linear infinite;
+  animation-delay: calc(0.22s + var(--i, 0) * 0.05s), 0s;
 }
 
 /* --- La présentation d'un nouveau type --- */
@@ -1004,47 +1521,51 @@ button[hidden] {
   width: 180vmax;
   height: 180vmax;
   margin: -90vmax 0 0 -90vmax;
-  background: repeating-conic-gradient(rgba(255, 216, 77, 0.13) 0deg 12deg, transparent 12deg 24deg);
-  animation: rayons-tournent 24s linear infinite;
+  background: repeating-conic-gradient(rgba(255, 215, 106, 0.16) 0deg 10deg, rgba(37, 99, 235, 0.08) 10deg 20deg);
+  -webkit-mask-image: radial-gradient(circle, #000000 0%, transparent 50%);
+  mask-image: radial-gradient(circle, #000000 0%, transparent 50%);
+  animation: tourne 24s linear infinite;
   pointer-events: none;
 }
 
-@keyframes rayons-tournent {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .panneau-deblocage {
-  position: relative;
   align-items: center;
   gap: 8px;
   width: min(400px, 100%);
-  border-color: var(--or);
 }
 
-.panneau-deblocage.arrivee {
-  animation: deblocage-arrivee 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) backwards;
+.ecran.visible .panneau-deblocage.arrivee {
+  animation: deblocage-arrivee 0.8s cubic-bezier(0.2, 1.6, 0.4, 1) backwards, bordure-tourne 3s linear infinite;
 }
 
 @keyframes deblocage-arrivee {
   from {
     opacity: 0;
-    transform: scale(0.4) rotate(-6deg);
+    transform: scale(0.3) rotate(-12deg);
   }
 }
 
 #deblocage-genre {
   color: var(--or);
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 12px rgba(255, 215, 106, 0.7);
 }
 
 #vignette-3d {
   width: 210px;
   height: 210px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 215, 106, 0.4), rgba(37, 99, 235, 0.25) 45%, transparent 70%);
+  animation: halo 2.4s ease-in-out infinite;
+}
+
+@keyframes halo {
+  50% {
+    box-shadow: 0 0 40px rgba(255, 215, 106, 0.35);
+  }
 }
 
 #deblocage-description {
@@ -1054,7 +1575,7 @@ button[hidden] {
 
 #deblocage-apprendre {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--bleu-glace);
 }
 
 #deblocage-continuer {
@@ -1072,7 +1593,7 @@ button[hidden] {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #0f2733;
+  background: radial-gradient(ellipse at center, #0f2a7a, var(--bleu-nuit));
   text-align: center;
   font-size: 18px;
 }
@@ -1081,10 +1602,16 @@ button[hidden] {
   display: none;
 }
 
+@keyframes reflet-glisse {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 /* Sur un petit écran : des icônes à la place des textes, et un menu rond plus petit. */
 @media (max-width: 520px) {
-  #bouton-pause,
-  #bouton-recommencer {
+  #barre-boutons #bouton-pause,
+  #barre-boutons #bouton-recommencer {
     width: 40px;
     padding: 0;
     font-size: 0;
@@ -1115,23 +1642,29 @@ button[hidden] {
   .roue-prix {
     font-size: 11px;
   }
+
+  #roue::before {
+    left: -58px;
+    top: -58px;
+    width: 116px;
+    height: 116px;
+  }
 }
 
 /* Moins de mouvement pour ceux qui le demandent à leur navigateur. */
 @media (prefers-reduced-motion: reduce) {
-  .ecran,
-  button,
-  .roue-bouton,
-  #bulle-tutoriel {
-    transition-duration: 0.01s;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
   }
 
-  .mot-titre,
-  .boutons-titre button,
-  .noeud,
-  .noeud-actuel,
-  .etoile-gagnee,
-  #fin-titre {
-    animation: none;
+  .particules,
+  .ecran-titre::before {
+    display: none;
   }
 }

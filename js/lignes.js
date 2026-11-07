@@ -13,9 +13,13 @@ const Lignes = {
   COUT_RENFORT: 1,
 
   // Une tour a besoin de soldats, et de place dans sa limite de lignes.
+  // Une tour du joueur vide peut quand même tracer une ligne si elle produit : la ligne partira
+  // dès le premier soldat, comme une ligne déjà en place (voir mettreAJour).
   peutPartirDe(partie, tour) {
     const lignes = partie.lignes.filter((ligne) => ligne.depart === tour).length;
-    return tour.soldats > 0 && lignes < Tours.lignesMax(tour);
+    const aDesSoldats =
+      tour.soldats > 0 || (tour.equipe === EQUIPE_JOUEUR && Tours.production(tour) > 0);
+    return aDesSoldats && lignes < Tours.lignesMax(tour);
   },
 
   // La ligne dépend des deux tours : celle qui envoie, et celle qui reçoit (voir donnees-liens.js).
@@ -64,11 +68,16 @@ const Lignes = {
       }
     }
 
-    // Une tour sans soldats arrête ses lignes. Les soldats en route continuent.
-    // Un ordi ne garde jamais de ligne au-delà de sa limite : les lignes en trop disparaissent.
+    // Une ligne du joueur reste en place même si sa tour tombe à 0 soldat : elle repart dès que la
+    // tour en produit un. Par exemple, un renfort coûte 2 soldats par seconde à une caserne qui en
+    // produit 1 : sans cela, la ligne disparaîtrait à chaque fois que le compteur touche 0.
+    // Seule une tour qui ne produit rien (une mine) perd sa ligne, car elle ne repartirait jamais.
+    // Un ordi arrête ses lignes à 0 soldat, et ne garde jamais de ligne au-delà de sa limite.
     // Une ligne de soin s'arrête si la tour soignée a changé de camp.
     partie.lignes = partie.lignes.filter((ligne) => {
-      if (ligne.depart.soldats <= 0) return false;
+      if (ligne.depart.soldats <= 0) {
+        if (ligne.depart.equipe !== EQUIPE_JOUEUR || Tours.production(ligne.depart) <= 0) return false;
+      }
       if (Tours.fiche(ligne.depart).aura && ligne.arrivee.equipe !== ligne.depart.equipe) return false;
       return !ligne.enPause || ligne.depart.equipe === EQUIPE_JOUEUR;
     });

@@ -74,6 +74,8 @@ const Scene3D = {
       haut: new THREE.Vector3(0, 1, 0),
       cote: new THREE.Vector3(1, 0, 0),
       couleur: new THREE.Color(),
+      matriceBras: new THREE.Matrix4(),
+      rotationBras: new THREE.Matrix4(),
     };
     Scene3D.creerSoldats();
     Scene3D.creerProjectiles();
@@ -136,6 +138,33 @@ const Scene3D = {
     Scene3D.mer.rotation.x = -Math.PI / 2;
     Scene3D.mer.position.y = -34;
     Scene3D.scene.add(Scene3D.mer);
+
+    // Une deuxième couche, presque vide : des éclats de lumière qui bougent à part.
+    const eclats = Scene3D.textureCanvas(256, (ctx, t) => {
+      ctx.clearRect(0, 0, t, t);
+      for (let i = 0; i < 90; i++) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.25 + Math.random() * 0.6})`;
+        const x = Math.random() * t;
+        const y = Math.random() * t;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 2 + Math.random() * 7, 0.8 + Math.random() * 1.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    eclats.repeat.set(30, 30);
+    Scene3D.reflets = new THREE.Mesh(
+      new THREE.PlaneGeometry(9000, 9000),
+      new THREE.MeshBasicMaterial({
+        map: eclats,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    Scene3D.reflets.rotation.x = -Math.PI / 2;
+    Scene3D.reflets.position.y = -33.6;
+    Scene3D.scene.add(Scene3D.reflets);
   },
 
   creerNuages() {
@@ -174,27 +203,43 @@ const Scene3D = {
     Scene3D.scene.add(Scene3D.jambes);
   },
 
-  // Le lot de corps pour ce type de soldat et cette armure.
+  // Le lot de corps (et de bras armés) pour ce type de soldat et cette armure.
   lotDeCorps(type, armure) {
     const cle = `${type}|${armure}`;
     if (!Scene3D.lots.has(cle)) {
-      const lot = new THREE.InstancedMesh(Modeles3D.soldat(type, armure), Modeles3D.materiauSoldat, Scene3D.SOLDATS_PAR_LOT);
-      lot.frustumCulled = false;
-      lot.castShadow = true;
-      lot.count = 0;
-      lot.setColorAt(0, new THREE.Color('#ffffff'));
-      Scene3D.scene.add(lot);
-      Scene3D.lots.set(cle, lot);
+      const modele = Modeles3D.soldat(type, armure);
+      const creer = (geometrie) => {
+        const instances = new THREE.InstancedMesh(geometrie, Modeles3D.materiauSoldat, Scene3D.SOLDATS_PAR_LOT);
+        instances.frustumCulled = false;
+        instances.castShadow = true;
+        instances.count = 0;
+        instances.setColorAt(0, new THREE.Color('#ffffff'));
+        Scene3D.scene.add(instances);
+        return instances;
+      };
+      Scene3D.lots.set(cle, {
+        corps: creer(modele.corps),
+        bras: creer(modele.bras),
+        epaule: new THREE.Matrix4().makeTranslation(...modele.epaule),
+        count: 0,
+      });
     }
     return Scene3D.lots.get(cle);
   },
 
   // Une bande claire avec des chevrons qui avancent, pour montrer le sens de la ligne.
+  // La bande est plus claire au centre et s'efface sur les bords, comme une lueur.
   creerTextureLigne() {
     const texture = Scene3D.textureCanvas(64, (ctx, t) => {
       ctx.clearRect(0, 0, t, t);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-      ctx.fillRect(0, t * 0.22, t, t * 0.56);
+      const lueur = ctx.createLinearGradient(0, 0, 0, t);
+      lueur.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      lueur.addColorStop(0.22, 'rgba(255, 255, 255, 0.35)');
+      lueur.addColorStop(0.5, 'rgba(255, 255, 255, 0.7)');
+      lueur.addColorStop(0.78, 'rgba(255, 255, 255, 0.35)');
+      lueur.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = lueur;
+      ctx.fillRect(0, 0, t, t);
       ctx.fillStyle = 'rgba(255, 255, 255, 1)';
       ctx.beginPath();
       ctx.moveTo(t * 0.2, t * 0.14);
@@ -212,12 +257,198 @@ const Scene3D = {
 
   // --- Le terrain ---
 
-  // L'île : un dessus d'herbe et des falaises, à la taille de la carte.
+  TERRE_AUTOUR_DES_TOURS: 115, // la distance minimale entre une tour et le bord de l'île
+
+  // Le contour de l'île : la carte et sa marge, aux coins très arrondis, avec des caps et des
+  // baies. Il est toujours le même pour un même niveau.
+  // Les baies ne rentrent que là où il n'y a pas de tour : chaque tour garde de la terre autour d'elle.
+  contourIle(partie) {
+    const marge = 70;
+    const lx = partie.largeur / 2 + marge;
+    const lz = partie.hauteur / 2 + marge;
+    const arrondi = Math.min(lx, lz) * 0.7;
+    const base = new THREE.Shape();
+    base.moveTo(-lx + arrondi, -lz);
+    base.lineTo(lx - arrondi, -lz);
+    base.quadraticCurveTo(lx, -lz, lx, -lz + arrondi);
+    base.lineTo(lx, lz - arrondi);
+    base.quadraticCurveTo(lx, lz, lx - arrondi, lz);
+    base.lineTo(-lx + arrondi, lz);
+    base.quadraticCurveTo(-lx, lz, -lx, lz - arrondi);
+    base.lineTo(-lx, -lz + arrondi);
+    base.quadraticCurveTo(-lx, -lz, -lx + arrondi, -lz);
+
+    const nombre = 180;
+    const points = base.getSpacedPoints(nombre).slice(0, nombre);
+    const tirage = Generateur.aleatoire(Math.imul(partie.numero || 1, 7919) + 17);
+    // Quelques grandes vagues mélangées : des caps et des baies, jamais deux îles pareilles.
+    const vagues = [1, 2, 3, 4, 6, 9].map((k) => ({
+      k,
+      force: (0.5 + tirage()) / Math.pow(k, 0.8),
+      phase: tirage() * Math.PI * 2,
+    }));
+    const total = vagues.reduce((somme, v) => somme + v.force, 0);
+
+    const normales = points.map((p, i) => {
+      const avant = points[(i + nombre - 1) % nombre];
+      const apres = points[(i + 1) % nombre];
+      const n = new THREE.Vector2(apres.y - avant.y, avant.x - apres.x).normalize();
+      if (n.dot(p) < 0) n.negate(); // toujours vers l'extérieur
+      return n;
+    });
+    let bosses = points.map((p, i) => {
+      const t = i / nombre;
+      const onde = vagues.reduce((s, v) => s + v.force * Math.sin(Math.PI * 2 * v.k * t + v.phase), 0) / total;
+      return Math.max(-65, 45 + 175 * onde);
+    });
+
+    // Repousse le bord vers l'extérieur tant qu'il est trop près d'une tour.
+    const tours = partie.tours.map((t) => ({ x: t.x - partie.largeur / 2, y: t.y - partie.hauteur / 2 }));
+    const eloigner = () => {
+      bosses = bosses.map((b, i) => {
+        const p = points[i];
+        const n = normales[i];
+        const tropPres = (d) =>
+          tours.some((t) => Math.hypot(p.x + n.x * d - t.x, p.y + n.y * d - t.y) < Scene3D.TERRE_AUTOUR_DES_TOURS);
+        let d = b;
+        while (tropPres(d) && d < 300) d += 4;
+        return d;
+      });
+    };
+    eloigner();
+    // On adoucit les bosses créées par les tours, puis on vérifie encore.
+    for (let passe = 0; passe < 4; passe++) {
+      bosses = bosses.map((b, i) => (bosses[(i + nombre - 1) % nombre] + 2 * b + bosses[(i + 1) % nombre]) / 4);
+    }
+    eloigner();
+
+    const bord = points.map((p, i) => p.clone().addScaledVector(normales[i], bosses[i]));
+    return { points, normales, bosses, bord, tirage };
+  },
+
+  // Vrai si le point (x, z) est sur l'île, à au moins "marge" de l'eau.
+  surIle(contour, x, z, marge = 0) {
+    const { bord } = contour;
+    let dedans = false;
+    let distance = Infinity;
+    for (let i = 0, j = bord.length - 1; i < bord.length; j = i++) {
+      const a = bord[i];
+      const b = bord[j];
+      if (a.y > z !== b.y > z && x < ((b.x - a.x) * (z - a.y)) / (b.y - a.y) + a.x) dedans = !dedans;
+      const dx = b.x - a.x;
+      const dz = b.y - a.y;
+      const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.y) * dz) / (dx * dx + dz * dz)));
+      distance = Math.min(distance, Math.hypot(x - a.x - dx * t, z - a.y - dz * t));
+    }
+    return dedans && distance >= marge;
+  },
+
+  // Le contour poussé de "ecart" vers l'extérieur : pour la plage, le lagon et l'écume.
+  formeIle(contour, ecart) {
+    return new THREE.Shape(
+      contour.points.map((p, i) => p.clone().addScaledVector(contour.normales[i], contour.bosses[i] + ecart)),
+    );
+  },
+
+  // Les matériaux de l'île, fabriqués une seule fois.
+  materiauxIle() {
+    if (!Scene3D._materiauxIle) {
+      const eau = (couleur, opacite) =>
+        new THREE.MeshBasicMaterial({
+          color: couleur,
+          transparent: true,
+          opacity: opacite,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        });
+      Scene3D._materiauxIle = {
+        herbe: new THREE.MeshStandardMaterial({ map: Scene3D.texturePlage, roughness: 0.95 }),
+        falaise: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }),
+        sable: new THREE.MeshStandardMaterial({ color: '#ead7a1', roughness: 1, flatShading: true }),
+        lagon: eau('#6ee6d8', 0.42),
+        lagonLarge: eau('#3fb6d6', 0.3),
+        ecume: eau('#ffffff', 0.5),
+        ecumeLoin: eau('#ffffff', 0.3),
+      };
+    }
+    return Scene3D._materiauxIle;
+  },
+
+  // Un bruit fixe : la même position donne toujours le même nombre, entre 0 et 1.
+  bruit(x, y, z) {
+    const s = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
+    return s - Math.floor(s);
+  },
+
+  // Les falaises : des rochers irréguliers, avec des couches d'herbe, de terre et de pierre.
+  sculpterFalaise(geometrie) {
+    const position = geometrie.attributes.position;
+    const couleurs = new Float32Array(position.count * 3);
+    const herbe = new THREE.Color('#4f9440');
+    const terre = new THREE.Color('#8b6a45');
+    const roche = new THREE.Color('#7a6e60');
+    const rocheSombre = new THREE.Color('#5b5248');
+    const c = new THREE.Color();
+    for (let i = 0; i < position.count; i++) {
+      // Arrondir évite qu'un même sommet, présent dans plusieurs triangles, bouge différemment.
+      const x = Math.round(position.getX(i) * 100) / 100;
+      const y = Math.round(position.getY(i) * 100) / 100;
+      const z = Math.round(position.getZ(i) * 100) / 100;
+      const hasard = Scene3D.bruit(x, y, z);
+      if (y < -4) {
+        const distance = Math.hypot(x, z) || 1;
+        const pousse = (hasard - 0.45) * 9;
+        position.setX(i, x + (x / distance) * pousse);
+        position.setZ(i, z + (z / distance) * pousse);
+        position.setY(i, y + (Scene3D.bruit(z, x, y) - 0.5) * 3);
+      }
+      if (y > -5) c.copy(herbe);
+      else if (y > -19) c.copy(terre).lerp(roche, hasard * 0.35);
+      else c.copy(hasard < 0.5 ? roche : rocheSombre);
+      couleurs[i * 3] = c.r;
+      couleurs[i * 3 + 1] = c.g;
+      couleurs[i * 3 + 2] = c.b;
+    }
+    geometrie.setAttribute('color', new THREE.BufferAttribute(couleurs, 3));
+    geometrie.computeVertexNormals();
+  },
+
+  // Une forme à plat, couchée au niveau "y" (le lagon, l'écume).
+  nappe(forme, y, materiau) {
+    const geometrie = new THREE.ShapeGeometry(forme, 1);
+    geometrie.rotateX(Math.PI / 2);
+    const mesh = new THREE.Mesh(geometrie, materiau);
+    mesh.position.y = y;
+    return mesh;
+  },
+
+  // Quelques rochers qui sortent de l'eau autour de l'île.
+  rochersDuLagon(contour) {
+    const f = Modeles3D.fabrique();
+    const { tirage, points, normales, bosses } = contour;
+    for (let i = 0; i < 9; i++) {
+      const k = Math.floor(tirage() * points.length);
+      const ecart = bosses[k] + 70 + tirage() * 70;
+      const x = points[k].x + normales[k].x * ecart;
+      const z = points[k].y + normales[k].y * ecart;
+      for (let j = 0; j < 1 + Math.floor(tirage() * 3); j++) {
+        const taille = 5 + tirage() * 9;
+        const g = new THREE.DodecahedronGeometry(taille, 0);
+        g.scale(1, 0.75, 1);
+        Modeles3D.poser(f, g, j % 2 ? COULEURS_3D.rocheSombre : COULEURS_3D.roche, x + (tirage() - 0.5) * 22, -32, z + (tirage() - 0.5) * 22);
+      }
+    }
+    return Modeles3D.fusionner(f);
+  },
+
+  // L'île : un dessus d'herbe et des falaises, entourée d'une plage, d'un lagon et d'écume.
   construireIle(partie) {
     const { scene } = Scene3D;
     if (Scene3D.ile) {
       scene.remove(Scene3D.ile);
-      Scene3D.ile.geometry.dispose();
+      Scene3D.ile.traverse((morceau) => {
+        if (morceau.geometry) morceau.geometry.dispose();
+      });
     }
     if (Scene3D.decor) {
       scene.remove(Scene3D.decor);
@@ -225,31 +456,17 @@ const Scene3D = {
       Scene3D.decor = null;
     }
 
-    const marge = 70;
-    const lx = partie.largeur / 2 + marge;
-    const lz = partie.hauteur / 2 + marge;
-    const arrondi = 90;
-    const forme = new THREE.Shape();
-    forme.moveTo(-lx + arrondi, -lz);
-    forme.lineTo(lx - arrondi, -lz);
-    forme.quadraticCurveTo(lx, -lz, lx, -lz + arrondi);
-    forme.lineTo(lx, lz - arrondi);
-    forme.quadraticCurveTo(lx, lz, lx - arrondi, lz);
-    forme.lineTo(-lx + arrondi, lz);
-    forme.quadraticCurveTo(-lx, lz, -lx, lz - arrondi);
-    forme.lineTo(-lx, -lz + arrondi);
-    forme.quadraticCurveTo(-lx, -lz, -lx + arrondi, -lz);
-
-    const geometrie = new THREE.ExtrudeGeometry(forme, {
+    const contour = Scene3D.contourIle(partie);
+    const geometrie = new THREE.ExtrudeGeometry(Scene3D.formeIle(contour, 0), {
       depth: 44,
       bevelEnabled: true,
       bevelSize: 16,
       bevelThickness: 12,
-      bevelSegments: 2,
-      curveSegments: 10,
+      bevelSegments: 3,
     });
     geometrie.rotateX(Math.PI / 2);
     geometrie.translate(0, -12, 0); // le dessus de l'île reste exactement au niveau du sol
+    Scene3D.sculpterFalaise(geometrie);
 
     if (!Scene3D.texturePlage) {
       Scene3D.texturePlage = Scene3D.textureCanvas(256, (ctx, t) => {
@@ -266,13 +483,45 @@ const Scene3D = {
       Scene3D.texturePlage.repeat.set(1 / 180, 1 / 180);
     }
 
-    const herbe = new THREE.MeshStandardMaterial({ map: Scene3D.texturePlage, roughness: 0.95 });
-    const falaise = new THREE.MeshStandardMaterial({ color: '#7a6548', flatShading: true, roughness: 1 });
-    Scene3D.ile = new THREE.Mesh(geometrie, [herbe, falaise]);
-    Scene3D.ile.receiveShadow = true;
-    scene.add(Scene3D.ile);
+    const m = Scene3D.materiauxIle();
+    const ile = new THREE.Group();
+    const terre = new THREE.Mesh(geometrie, [m.herbe, m.falaise]);
+    terre.receiveShadow = true;
+    ile.add(terre);
 
-    const decor = Modeles3D.decor(partie.niveau, partie.largeur, partie.hauteur);
+    // La plage de sable, juste au-dessus de l'eau, qui dépasse des falaises.
+    const plage = new THREE.ExtrudeGeometry(Scene3D.formeIle(contour, 30), {
+      depth: 4,
+      bevelEnabled: true,
+      bevelSize: 8,
+      bevelThickness: 3,
+      bevelSegments: 2,
+    });
+    plage.rotateX(Math.PI / 2);
+    plage.translate(0, -26, 0);
+    const sable = new THREE.Mesh(plage, m.sable);
+    sable.receiveShadow = true;
+    ile.add(sable);
+
+    // Le lagon : l'eau claire et peu profonde autour de l'île, puis deux vagues d'écume.
+    ile.add(Scene3D.nappe(Scene3D.formeIle(contour, 150), -31.6, m.lagonLarge));
+    ile.add(Scene3D.nappe(Scene3D.formeIle(contour, 85), -31.4, m.lagon));
+    const ecume = (de, a, materiau) => {
+      const forme = Scene3D.formeIle(contour, a);
+      forme.holes.push(Scene3D.formeIle(contour, de));
+      return Scene3D.nappe(forme, -31.2, materiau);
+    };
+    ile.add(ecume(40, 50, m.ecume));
+    ile.add(ecume(58, 64, m.ecumeLoin));
+
+    const rochers = new THREE.Mesh(Scene3D.rochersDuLagon(contour), Modeles3D.materiau);
+    rochers.castShadow = true;
+    ile.add(rochers);
+
+    Scene3D.ile = ile;
+    scene.add(ile);
+
+    const decor = Modeles3D.decor(partie.niveau, partie.largeur, partie.hauteur, contour);
     if (decor) {
       Scene3D.decor = new THREE.Mesh(decor, Modeles3D.materiau);
       Scene3D.decor.castShadow = true;
@@ -282,7 +531,7 @@ const Scene3D = {
 
     // L'ombre du soleil couvre toute la carte.
     const ombre = Scene3D.soleil.shadow.camera;
-    const portee = Math.max(lx, lz) + 140;
+    const portee = Math.max(partie.largeur, partie.hauteur) / 2 + 230;
     ombre.left = -portee;
     ombre.right = portee;
     ombre.top = portee;
@@ -571,18 +820,50 @@ const Scene3D = {
   },
 
   // Le cercle de portée de la tour sélectionnée.
+  // Avec, sous la tour sélectionnée, un anneau doré en pointillés qui tourne.
   afficherPortee(partie) {
+    const t = Scene3D.horloge;
     const tour = InterfaceTours.tourSelectionnee();
+    const anneau = Scene3D.anneauSelection;
+    anneau.visible = Boolean(tour);
+    if (tour) {
+      anneau.position.set(tour.x - partie.largeur / 2, 4.5, tour.y - partie.hauteur / 2);
+      anneau.rotation.y = t * 0.9;
+      anneau.scale.setScalar(62 + Math.sin(t * 5) * 3);
+    }
+
     const portee = tour ? Tours.porteeAffichee(tour) : 0;
     Scene3D.cerclePortee.visible = portee > 0;
     if (portee <= 0) return;
     Scene3D.cerclePortee.position.set(tour.x - partie.largeur / 2, 5, tour.y - partie.hauteur / 2);
     Scene3D.cerclePortee.scale.setScalar(portee);
     const couleur = Tours.fiche(tour).aura ? '#7dffb0' : partie.palette[tour.equipe].couleur;
-    for (const morceau of Scene3D.cerclePortee.children) morceau.material.color.set(couleur);
+    const [disque, bord] = Scene3D.cerclePortee.children;
+    disque.material.color.set(couleur);
+    bord.material.color.set(couleur);
+    disque.material.opacity = 0.12 + Math.sin(t * 3) * 0.05;
+    bord.material.opacity = 0.75 + Math.sin(t * 3) * 0.22;
   },
 
   creerCerclePortee() {
+    const selection = new THREE.Group();
+    const materiau = new THREE.MeshBasicMaterial({
+      color: '#ffd76a',
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    for (let i = 0; i < 12; i++) {
+      const arc = new THREE.RingGeometry(0.86, 1, 6, 1, (i / 12) * Math.PI * 2, 0.32);
+      arc.rotateX(-Math.PI / 2);
+      selection.add(new THREE.Mesh(arc, materiau));
+    }
+    selection.visible = false;
+    selection.renderOrder = 2;
+    Scene3D.scene.add(selection);
+    Scene3D.anneauSelection = selection;
+
     const groupe = new THREE.Group();
     const disque = new THREE.CircleGeometry(1, 48);
     disque.rotateX(-Math.PI / 2);
@@ -696,12 +977,20 @@ const Scene3D = {
       const face = partie.lignes.some((l) => l.depart === ligne.arrivee && l.arrivee === ligne.depart);
       let mesh = Scene3D.objetsLignes.get(ligne);
       if (!mesh || mesh.userData.face !== face) {
+        const croissance = mesh ? mesh.userData.croissance : 0;
         if (mesh) {
           Scene3D.scene.remove(mesh);
           mesh.geometry.dispose();
         }
         mesh = Scene3D.creerLigne(partie, ligne, face);
+        mesh.userData.croissance = croissance;
         Scene3D.objetsLignes.set(ligne, mesh);
+      }
+      // Une nouvelle ligne se déroule depuis sa tour, en un quart de seconde.
+      if (mesh.userData.croissance < 1) {
+        mesh.userData.croissance = Math.min(1, mesh.userData.croissance + dt / 0.25);
+        const p = mesh.userData.croissance;
+        mesh.scale.x = Math.max(0.001, 1 - Math.pow(1 - p, 3));
       }
       // Une ligne de soin est verte, quelle que soit l'équipe.
       const couleur = Tours.fiche(ligne.depart).aura ? '#6dffa8' : partie.palette[ligne.depart.equipe].couleur;
@@ -718,14 +1007,16 @@ const Scene3D = {
     const dz = (arrivee.y - depart.y) * part;
     const longueur = Math.hypot(dx, dz);
 
-    const geometrie = new THREE.PlaneGeometry(longueur, 15);
+    const geometrie = new THREE.PlaneGeometry(longueur, 17);
     const uv = geometrie.attributes.uv;
     for (let i = 0; i < uv.count; i++) uv.setX(i, (uv.getX(i) * longueur) / 26);
+    geometrie.translate(longueur / 2, 0, 0); // l'origine est à la tour de départ, pour se dérouler
 
     const mesh = new THREE.Mesh(geometrie);
     mesh.rotation.x = -Math.PI / 2;
     mesh.rotation.z = -Math.atan2(dz, dx);
-    mesh.position.set(ax + dx / 2, 3.5, az + dz / 2);
+    mesh.position.set(ax, 3.5, az);
+    mesh.userData.croissance = 0;
     mesh.renderOrder = 1;
     mesh.userData.face = face;
     Scene3D.scene.add(mesh);
@@ -740,7 +1031,8 @@ const Scene3D = {
   },
 
   // Ajoute un corps à son lot, penché selon l'angle demandé (pour se battre ou tomber).
-  poserCorps(type, equipe, couleur, x, y, z, direction, penche, taille) {
+  // "bras" est l'angle du bras droit : négatif vers l'avant, positif vers l'arrière.
+  poserCorps(type, equipe, couleur, x, y, z, direction, penche, taille, bras = 0) {
     const v = Scene3D.outils;
     const lot = Scene3D.lotDeCorps(type, Scene3D.armureDeLEquipe(equipe));
     if (lot.count >= Scene3D.SOLDATS_PAR_LOT) return null;
@@ -750,8 +1042,14 @@ const Scene3D = {
     v.position.set(x, y, z);
     v.echelle.setScalar(taille);
     v.matrice.compose(v.position, v.rotation, v.echelle);
-    lot.setMatrixAt(lot.count, v.matrice);
-    lot.setColorAt(lot.count, v.couleur.set(couleur));
+    v.couleur.set(couleur);
+    lot.corps.setMatrixAt(lot.count, v.matrice);
+    lot.corps.setColorAt(lot.count, v.couleur);
+
+    // Le bras suit le corps, accroché à l'épaule, puis tourne autour d'elle.
+    v.matriceBras.multiplyMatrices(v.matrice, lot.epaule).multiply(v.rotationBras.makeRotationX(bras));
+    lot.bras.setMatrixAt(lot.count, v.matriceBras);
+    lot.bras.setColorAt(lot.count, v.couleur);
     lot.count += 1;
     return lot;
   },
@@ -769,15 +1067,23 @@ const Scene3D = {
       const z = lieu.y - partie.hauteur / 2;
       const couleur = partie.palette[s.equipe].couleur;
       const direction = Math.atan2(s.arrivee.x - s.depart.x, s.arrivee.y - s.depart.y);
-      const taille = 1.15 + s.niveau * 0.16;
+      // En sortant de la tour, le soldat grandit d'un coup, avec un petit rebond.
+      const sortie = Math.min(1, s.parcouru / 16);
+      const rebond = sortie < 1 ? 1 + Math.sin(sortie * Math.PI) * 0.18 : 1;
+      const taille = (1.15 + s.niveau * 0.16) * (0.2 + 0.8 * sortie) * rebond;
 
-      // Ils marchent : le corps sautille à chaque pas et les jambes se balancent.
+      // Ils marchent : le corps sautille à chaque pas, les jambes et le bras se balancent.
       const pas = t * (s.vitesse / 7) + s.phase;
       const hanche = 5.2 * taille + Math.abs(Math.sin(pas)) * 1.6;
       // Face à un ennemi, ils se penchent et frappent. Le coureur court toujours penché.
       let penche = Soldats.fiche(s).vitesse > 1.5 ? 0.3 : 0.04;
-      if (s.engage) penche = 0.4 + Math.sin(t * 22 + s.phase) * 0.3;
-      Scene3D.poserCorps(s.type, s.equipe, couleur, x, hanche + 3, z, direction + Math.sin(pas) * 0.14, penche, taille);
+      let bras = -Math.sin(pas) * 0.7;
+      if (s.engage) {
+        const coup = Math.sin(t * 22 + s.phase);
+        penche = 0.4 + coup * 0.3;
+        bras = -1.7 - coup * 1.1; // le bras se lève puis s'abat
+      }
+      Scene3D.poserCorps(s.type, s.equipe, couleur, x, hanche + 3, z, direction + Math.sin(pas) * 0.14, penche, taille, bras);
 
       // Deux jambes, en opposition.
       for (const cote of [-1, 1]) {
@@ -815,13 +1121,17 @@ const Scene3D = {
         m.direction,
         -chute * (Math.PI / 2),
         Math.max(0.01, taille),
+        -chute * 2.6, // en tombant, il lève le bras au-dessus de la tête
       );
       return true;
     });
 
     for (const lot of Scene3D.lots.values()) {
-      lot.instanceMatrix.needsUpdate = true;
-      if (lot.instanceColor) lot.instanceColor.needsUpdate = true;
+      for (const instances of [lot.corps, lot.bras]) {
+        instances.count = lot.count;
+        instances.instanceMatrix.needsUpdate = true;
+        if (instances.instanceColor) instances.instanceColor.needsUpdate = true;
+      }
     }
     Scene3D.jambes.count = jambes;
     Scene3D.jambes.instanceMatrix.needsUpdate = true;
@@ -864,6 +1174,13 @@ const Scene3D = {
           Effets.impact(e.x - partie.largeur / 2, 8, e.y - partie.hauteur / 2, '#ffffff', 10);
           break;
         case 'mort':
+          Effets.gerbe(e.x - partie.largeur / 2, 3, e.y - partie.hauteur / 2, '#cdb98f', 4, {
+            vitesse: 28,
+            montee: 22,
+            gravite: 50,
+            taille: 2,
+            vie: 0.55,
+          });
           if (Scene3D.morts.length < Scene3D.MORTS_MAX) {
             Scene3D.morts.push({
               x: e.x - partie.largeur / 2,
@@ -967,9 +1284,21 @@ const Scene3D = {
   },
 
   animerDecor(dt) {
+    const t = Scene3D.horloge;
     Scene3D.mer.material.map.offset.x += dt * 0.012;
     Scene3D.mer.material.map.offset.y += dt * 0.006;
-    Scene3D.mer.position.y = -34 + Math.sin(Scene3D.horloge * 0.6) * 1.5;
+    Scene3D.mer.position.y = -34 + Math.sin(t * 0.6) * 1.5;
+    // Les reflets du soleil glissent dans l'autre sens, et scintillent.
+    Scene3D.reflets.material.map.offset.x -= dt * 0.017;
+    Scene3D.reflets.material.map.offset.y += dt * 0.011;
+    Scene3D.reflets.material.opacity = 0.5 + Math.sin(t * 1.7) * 0.18;
+    Scene3D.reflets.position.y = Scene3D.mer.position.y + 0.4;
+
+    // L'écume va et vient contre la plage, comme des vagues.
+    const m = Scene3D.materiauxIle();
+    m.ecume.opacity = 0.34 + Math.sin(t * 1.4) * 0.26;
+    m.ecumeLoin.opacity = 0.22 + Math.sin(t * 1.4 - 1.7) * 0.18;
+    m.lagon.opacity = 0.4 + Math.sin(t * 0.7) * 0.05;
 
     for (const nuage of Scene3D.nuages) {
       nuage.userData.angle += nuage.userData.vitesse * dt;

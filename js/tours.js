@@ -248,9 +248,16 @@ const Tours = {
       ctx.stroke();
     }
 
-    // Le compteur de soldats, tout en haut.
+    // Le compteur de soldats, tout en haut. Il rebondit un peu quand il change.
+    const maintenant = performance.now();
+    if (tour.compteurAffiche !== tour.soldats) {
+      tour.compteurAffiche = tour.soldats;
+      tour.rebondCompteur = maintenant;
+    }
+    const depuis = (maintenant - (tour.rebondCompteur || 0)) / 220;
+    const rebond = depuis < 1 ? 1 + Math.sin(depuis * Math.PI) * 0.22 : 1;
     const compteurY = pointY - rayonPoint - 2;
-    ctx.font = `800 ${Math.max(15, 24 * echelle)}px system-ui, sans-serif`;
+    ctx.font = `800 ${Math.max(15, 24 * echelle) * rebond}px system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.lineWidth = 4;
