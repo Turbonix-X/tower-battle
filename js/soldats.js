@@ -1,9 +1,8 @@
 // soldats.js — Les soldats : déplacement entre les tours et combats à l'arrivée.
+// Le dessin 3D et les effets sont dans scene3d.js, qui lit "partie.evenements".
 
 const Soldats = {
   VITESSE: 110, // en unités de carte par seconde
-  RAYON: 6,
-  DUREE_ANIMATION_COMBAT: 0.45, // en secondes
 
   // Le soldat garde le niveau de sa tour au moment où il part.
   // "blesse" : il a déjà utilisé son avantage de soldat qui compte double.
@@ -13,6 +12,8 @@ const Soldats = {
       depart,
       arrivee,
       niveau: Tours.niveau(depart),
+      vitesse: Soldats.VITESSE * Tours.fiche(depart).vitesseSoldats,
+      phase: Math.random() * Math.PI * 2, // pour que les soldats ne marchent pas tous au pas
       blesse: false,
       mort: false,
       parcouru: 0,
@@ -21,7 +22,7 @@ const Soldats = {
   },
 
   mettreAJour(partie, dt) {
-    for (const soldat of partie.soldats) soldat.parcouru += Soldats.VITESSE * dt;
+    for (const soldat of partie.soldats) soldat.parcouru += soldat.vitesse * dt;
 
     // Les rencontres d'abord : deux soldats face à face se battent avant d'atteindre une tour.
     Soldats.resoudreRencontres(partie);
@@ -31,9 +32,6 @@ const Soldats = {
       Soldats.arriver(partie, soldat);
       return false;
     });
-
-    for (const combat of partie.combats) combat.temps += dt;
-    partie.combats = partie.combats.filter((c) => c.temps < Soldats.DUREE_ANIMATION_COMBAT);
   },
 
   // Les plus anciens sont en tête de la liste : ce sont eux qui se rencontrent en premier.
@@ -63,12 +61,7 @@ const Soldats = {
   // Un soldat de niveau plus élevé compte double : il faut deux adversaires pour le tuer.
   combattre(partie, a, b) {
     const { x, y } = Soldats.position(a);
-    partie.combats.push({
-      x,
-      y,
-      temps: 0,
-      couleurs: [partie.palette[a.equipe].couleur, partie.palette[b.equipe].couleur],
-    });
+    partie.evenements.push({ type: 'combat', x, y, equipes: [a.equipe, b.equipe] });
 
     if (a.niveau > b.niveau && !a.blesse) {
       a.blesse = true;
@@ -87,14 +80,19 @@ const Soldats = {
     const tour = soldat.arrivee;
 
     if (tour.equipe === soldat.equipe) {
-      tour.soldats += 1; // renfort : ne soigne pas les PV
+      // Renfort : ne soigne pas les PV, et ne dépasse jamais la capacité de la tour.
+      tour.soldats = Math.min(tour.soldats + 1, Tours.capacite(tour));
+      partie.evenements.push({ type: 'renfort', tour });
     } else if (tour.soldats > 0) {
       Soldats.combattreTour(soldat, tour);
+      partie.evenements.push({ type: 'impact', tour, equipe: soldat.equipe });
     } else {
-      tour.pv -= 1;
+      tour.pv -= Tours.degatsParSoldat(tour);
+      partie.evenements.push({ type: 'degat', tour, equipe: soldat.equipe });
       if (tour.pv <= 0) {
         Tours.capturer(tour, soldat.equipe);
         Lignes.retirerDepuis(partie, tour);
+        partie.evenements.push({ type: 'capture', tour, equipe: soldat.equipe });
       }
     }
   },
@@ -119,51 +117,5 @@ const Soldats = {
       x: soldat.depart.x + (soldat.arrivee.x - soldat.depart.x) * avancee,
       y: soldat.depart.y + (soldat.arrivee.y - soldat.depart.y) * avancee,
     };
-  },
-
-  dessiner(ctx, partie, vue) {
-    const rayon = Math.max(3, Soldats.RAYON * vue.echelle);
-    for (const soldat of partie.soldats) {
-      const monde = Soldats.position(soldat);
-      const { x, y } = vue.versEcran(monde.x, monde.y);
-      ctx.beginPath();
-      ctx.arc(x, y, rayon, 0, Math.PI * 2);
-      ctx.fillStyle = partie.palette[soldat.equipe].couleur;
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-  },
-
-  // L'animation de combat : un anneau et des étincelles aux couleurs des deux équipes.
-  dessinerCombats(ctx, partie, vue) {
-    const taille = Math.max(10, 18 * vue.echelle);
-    for (const combat of partie.combats) {
-      const avancee = combat.temps / Soldats.DUREE_ANIMATION_COMBAT;
-      const { x, y } = vue.versEcran(combat.x, combat.y);
-      ctx.globalAlpha = 1 - avancee;
-
-      ctx.beginPath();
-      ctx.arc(x, y, taille * (0.3 + avancee), 0, Math.PI * 2);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      for (let i = 0; i < 6; i++) {
-        const angle = (i / 6) * Math.PI * 2 + 0.5;
-        ctx.beginPath();
-        ctx.arc(
-          x + Math.cos(angle) * taille * (0.4 + avancee),
-          y + Math.sin(angle) * taille * (0.4 + avancee),
-          Math.max(2, 3 * vue.echelle),
-          0,
-          Math.PI * 2,
-        );
-        ctx.fillStyle = combat.couleurs[i % 2];
-        ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
   },
 };

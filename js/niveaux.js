@@ -107,14 +107,14 @@ const NIVEAUX_TUTORIEL = [
       { action: 'capture', tour: 3, texte: 'tut7b' },
     ],
   },
-  // 8. Compter double.
+  // 8. Compter double. On y croise aussi une forteresse et un campement.
   {
     ordis: [{ equipe: 'rouge', force: 2, attenteInitiale: 15 }],
     tempsEtoiles: { trois: 50, deux: 95 },
     tours: [
       { x: 150, y: 330, equipe: 'bleu', soldats: 32, pv: 20 },
-      { x: 480, y: 170, equipe: 'neutre', soldats: 8, pv: 6 },
-      { x: 480, y: 490, equipe: 'neutre', soldats: 8, pv: 6 },
+      { x: 480, y: 170, equipe: 'neutre', soldats: 8, pv: 6, type: 'forteresse' },
+      { x: 480, y: 490, equipe: 'neutre', soldats: 8, pv: 6, type: 'campement' },
       { x: 850, y: 330, equipe: 'rouge', soldats: 8, pv: 10 },
     ],
     tutoriel: [{ action: 'capture', tour: 3, texte: 'tut8a', main: { de: 0, vers: 3 } }],
@@ -132,30 +132,37 @@ const NIVEAUX_TUTORIEL = [
     ],
     tutoriel: [{ action: 'capture', tour: 3, texte: 'tut9a', main: { de: 0, vers: 3 } }],
   },
-  // 10. Deux ennemis : l'examen final du tutoriel.
+  // 10. Deux ennemis, l'or et les améliorations : l'examen final du tutoriel.
   {
     ordis: [
       { equipe: 'rouge', force: 3, attenteInitiale: 8 },
       { equipe: 'jaune', force: 3, attenteInitiale: 8 },
     ],
+    orDepart: 20,
     tempsEtoiles: { trois: 75, deux: 135 },
     tours: [
       { x: 140, y: 330, equipe: 'bleu', soldats: 15, pv: 20 },
       { x: 860, y: 150, equipe: 'rouge', soldats: 8, pv: 12 },
       { x: 860, y: 510, equipe: 'jaune', soldats: 8, pv: 12 },
-      { x: 340, y: 170, equipe: 'neutre', soldats: 4, pv: 5 },
+      { x: 340, y: 170, equipe: 'neutre', soldats: 4, pv: 5, type: 'mine' },
       { x: 340, y: 490, equipe: 'neutre', soldats: 4, pv: 5 },
       { x: 560, y: 330, equipe: 'neutre', soldats: 8, pv: 8 },
       { x: 620, y: 130, equipe: 'neutre', soldats: 5, pv: 6 },
       { x: 620, y: 530, equipe: 'neutre', soldats: 5, pv: 6 },
     ],
-    tutoriel: [{ action: 'temps', duree: 8, texte: 'tut10a' }],
+    tutoriel: [
+      { action: 'amelioration', tour: 0, texte: 'tut10b', dureeMax: 20 },
+      { action: 'capture', tour: 3, texte: 'tut10c', main: { de: 0, vers: 3 }, dureeMax: 20 },
+      { action: 'temps', duree: 8, texte: 'tut10a' },
+    ],
   },
 ];
 
 const Niveaux = {
   NOMBRE: 1000,
   PAR_PAGE: 50,
+  PIECES_PAR_ETOILE: 10,
+  OR_DE_DEPART: 5, // assez pour un premier point d'amélioration sur une caserne
   cache: new Map(),
 
   obtenir(numero) {
@@ -173,6 +180,11 @@ const Niveaux = {
     if (temps <= niveau.tempsEtoiles.trois) return 3;
     if (temps <= niveau.tempsEtoiles.deux) return 2;
     return 1;
+  },
+
+  // Les pièces gagnées à la fin d'un niveau : 10 par étoile, le double pour un boss.
+  piecesGagnees(niveau, etoiles) {
+    return etoiles * Niveaux.PIECES_PAR_ETOILE * (niveau.boss ? 2 : 1);
   },
 
   creerPartie(numero) {
@@ -193,9 +205,10 @@ const Niveaux = {
       ordis: niveau.ordis.map((ordi) => Ordi.creer(ordi)),
       tutoriel: Tutoriel.creer(niveau),
       temps: 0, // la durée de la partie, en secondes, sans les pauses
+      or: { [EQUIPE_JOUEUR]: niveau.orDepart ?? Niveaux.OR_DE_DEPART }, // disparaît à la fin du niveau
       lignes: [],
       soldats: [],
-      combats: [], // les animations de combat en cours
+      evenements: [], // ce qui vient de se passer, pour les effets 3D
       trace: null, // la ligne en train d'être tracée
       coupe: null, // le trait en train de couper des lignes
     };

@@ -2,7 +2,7 @@
 
 Ce fichier est mis à jour à chaque fois qu'une étape est finie.
 
-**Avancement : 7 / 20 étapes finies, 1 commencée**
+**Avancement : 10 / 20 étapes finies, 1 commencée**
 
 Légende : ✅ finie · 🟡 commencée · ⬜ à faire
 
@@ -18,9 +18,9 @@ Légende : ✅ finie · 🟡 commencée · ⬜ à faire
 
 ## Le contenu
 
-- ⬜ **8. Types de tours**
-- ⬜ **9. Améliorations**
-- ⬜ **10. Argent**
+- ✅ **8. L'argent** — or de partie, pièces, mine d'or, fichier de données des types de tours
+- ✅ **9. Les améliorations** — 6 points à répartir sur 3 statistiques, prix croissants, menu rond, apparence qui change
+- ✅ **10. Les premiers types de tours** — caserne, forteresse, campement, placés par le générateur, fiche d'info
 - ⬜ **11. Décors**
 - ⬜ **12. Obstacles**
 - ⬜ **13. Brouillard**
@@ -31,8 +31,10 @@ Légende : ✅ finie · 🟡 commencée · ⬜ à faire
 - ⬜ **15. Sons** — bruitages et musique (les réglages de volume existent déjà, mais il n'y a encore aucun son)
 - ⬜ **16. Équilibrage** — réglages de la difficulté et des étoiles avec de vraies parties
 - ⬜ **17. Derniers tests** — sur ordinateur et sur téléphone
-- ⬜ **18. À définir**
+- ⬜ **18. À définir** — par exemple la boutique pour dépenser les pièces
 - ⬜ **19. À définir**
 - 🟡 **20. Publication** — mise en ligne sur GitHub Pages : faite. À refaire à la fin avec la version finale
+
+*Hors liste, fait en version 1.6 : le passage du jeu et du menu en 3D, avec ses animations.*
 
 **Jouer :** https://turbonix-x.github.io/tower-battle/

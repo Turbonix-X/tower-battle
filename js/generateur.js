@@ -10,6 +10,11 @@ const Generateur = {
   MARGE_BAS: 60,
   EQUIPES_ENNEMIES: ['rouge', 'jaune', 'vert', 'orange', 'violet'],
   PERSONNALITES: ['agressif', 'defenseur', 'ruse'],
+  // À partir de quel niveau apparaît chaque type de tour.
+  NIVEAU_MINES: 12,
+  NIVEAU_FORTERESSE: 15,
+  NIVEAU_CAMPEMENT: 25,
+  NIVEAU_TYPES_ENNEMIS: 80,
 
   // Un générateur aléatoire à graine (mulberry32).
   aleatoire(graine) {
@@ -54,7 +59,6 @@ const Generateur = {
       // Réglages vides pour plus tard.
       decor: null,
       obstacles: [],
-      typesDeTours: ['base'],
       brouillard: null,
     };
   },
@@ -116,6 +120,7 @@ const Generateur = {
       });
     }
 
+    Generateur.choisirTypes(tours, numero, reglages, tirage);
     if (reglages.boss) Generateur.renforcerBoss(tours, ordis, reglages);
 
     return {
@@ -128,16 +133,43 @@ const Generateur = {
       tempsEtoiles: Generateur.tempsEtoiles(reglages),
       decor: reglages.decor,
       obstacles: reglages.obstacles,
-      typesDeTours: reglages.typesDeTours,
       brouillard: reglages.brouillard,
     };
   },
 
-  // Le boss : une tour couronnée, bien plus solide, qui produit plus vite.
+  // Les cartes deviennent plus variées au fil des niveaux. Le joueur démarre toujours en caserne.
+  choisirTypes(tours, numero, reglages, tirage) {
+    const part = Math.min(0.4, 0.05 + 0.5 * reglages.avancee);
+    const neutres = tours.filter((tour) => tour.equipe === 'neutre');
+
+    for (const tour of tours) {
+      if (tour.equipe === EQUIPE_JOUEUR) continue;
+      const ennemie = tour.equipe !== 'neutre';
+      const seuil = ennemie ? Generateur.NIVEAU_TYPES_ENNEMIS : 0;
+      const tirageType = tirage();
+      if (numero >= Math.max(seuil, Generateur.NIVEAU_FORTERESSE) && tirageType < part / 2) {
+        tour.type = 'forteresse';
+      } else if (numero >= Math.max(seuil, Generateur.NIVEAU_CAMPEMENT) && tirageType < part) {
+        tour.type = 'campement';
+      }
+    }
+
+    // Les mines sont toujours des tours neutres à capturer.
+    if (numero >= Generateur.NIVEAU_MINES) {
+      const nbMines = 1 + Math.floor(reglages.avancee * 3);
+      for (let i = 0; i < nbMines && neutres.length > 0; i++) {
+        const tour = neutres.splice(Generateur.entre(tirage, 0, neutres.length - 1), 1)[0];
+        tour.type = 'mine';
+      }
+    }
+  },
+
+  // Le boss : une forteresse couronnée, bien plus solide, qui produit plus vite.
   renforcerBoss(tours, ordis, reglages) {
     const tourBoss = tours.find((tour) => tour.equipe === ordis[0].equipe);
     tourBoss.boss = true;
-    tourBoss.production = 1.5;
+    tourBoss.type = 'forteresse';
+    tourBoss.bonusProduction = 3; // la forteresse produit lentement : le boss produit 1,5 soldat/s
     tourBoss.soldats = 15 + Math.round(85 * reglages.avancee);
     tourBoss.pv = 40 + Math.round(100 * reglages.avancee);
   },
@@ -261,7 +293,11 @@ const Generateur = {
     const atteignable = neutres.some((neutre) => {
       const pourJoueur = Math.min(...duJoueur.map((j) => distance(j, neutre)));
       const pourEnnemi = Math.min(...ennemies.map((e) => distance(e, neutre)));
-      return pourJoueur < pourEnnemi && neutre.soldats + neutre.pv <= pouvoirDepart;
+      return (
+        neutre.type !== 'mine' &&
+        pourJoueur < pourEnnemi &&
+        neutre.soldats + neutre.pv <= pouvoirDepart
+      );
     });
     if (!atteignable) problemes.push('aucune tour neutre à portée du joueur');
 

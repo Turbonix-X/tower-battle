@@ -1,6 +1,6 @@
 // menu.js — Les écrans et les boutons : titre, paramètres, crédits, pause, fin et barre du haut.
 
-const VERSION_JEU = 'Alpha 1.5';
+const VERSION_JEU = 'Alpha 1.6';
 
 const Menu = {
   segments: {}, // un morceau de la barre des soldats par équipe
@@ -76,6 +76,7 @@ const Menu = {
       Sauvegarde.effacer();
       confirmation.hidden = true;
       Menu.appliquerParametres();
+      Menu.afficherPieces();
       message.textContent = Textes.t('sauvegardeEffacee');
     });
   },
@@ -114,13 +115,20 @@ const Menu = {
   },
 
   afficherTitre() {
+    document.body.classList.add('mode-menu');
     document.getElementById('confirmation').hidden = true;
     document.getElementById('message-sauvegarde').textContent = '';
     Menu.afficherBulle(null);
+    Menu.afficherPieces();
     Menu.montrerEcran('ecran-titre');
   },
 
+  afficherPieces() {
+    document.getElementById('pieces-titre').textContent = Sauvegarde.donnees.pieces;
+  },
+
   afficherJeu(partie) {
+    document.body.classList.remove('mode-menu');
     Menu.montrerEcran(null);
     const texte = partie.niveau.boss ? 'niveauBoss' : 'niveau';
     document.getElementById('info-niveau').textContent = Textes.t(texte, { n: partie.numero });
@@ -131,14 +139,28 @@ const Menu = {
     Menu.montrerEcran('ecran-pause');
   },
 
-  afficherFin({ victoire, temps, etoiles, aUnSuivant }) {
+  afficherFin({ victoire, temps, etoiles, pieces, aUnSuivant }) {
     document.getElementById('fin-titre').textContent = Textes.t(victoire ? 'victoire' : 'defaite');
+    document.getElementById('ecran-fin').classList.toggle('fin-defaite', !victoire);
     document.getElementById('fin-temps').textContent = Textes.t('temps', {
       temps: Menu.formaterTemps(temps),
     });
+
     const score = document.getElementById('fin-etoiles');
     score.hidden = !victoire;
-    score.textContent = victoire ? '★'.repeat(etoiles) + '☆'.repeat(3 - etoiles) : '';
+    score.replaceChildren();
+    for (let i = 0; i < 3 && victoire; i++) {
+      const etoile = document.createElement('span');
+      etoile.textContent = i < etoiles ? '★' : '☆';
+      etoile.className = i < etoiles ? 'etoile etoile-gagnee' : 'etoile';
+      etoile.style.animationDelay = `${0.35 + i * 0.22}s`;
+      score.append(etoile);
+    }
+
+    const gain = document.getElementById('fin-pieces');
+    gain.hidden = !victoire;
+    gain.textContent = victoire ? Textes.t('piecesGagnees', { n: pieces }) : '';
+
     document.getElementById('bouton-suivant').hidden = !(victoire && aUnSuivant);
     Menu.afficherBulle(null);
     Menu.montrerEcran('ecran-fin');
@@ -150,6 +172,13 @@ const Menu = {
     const bulle = document.getElementById('bulle-tutoriel');
     bulle.classList.toggle('visible', cle !== null);
     if (cle !== null) bulle.textContent = Textes.t(cle);
+  },
+
+  // Sans 3D, le jeu ne peut pas s'afficher : on le dit clairement.
+  afficherErreur3D() {
+    Textes.appliquer(Sauvegarde.donnees.parametres.langue);
+    document.body.classList.add('mode-menu');
+    document.getElementById('erreur-3d').hidden = false;
   },
 
   formaterTemps(secondes) {
@@ -181,7 +210,7 @@ const Menu = {
     return totaux;
   },
 
-  // Seules les équipes présentes dans la partie apparaissent dans la barre.
+  // La barre du haut : la part de soldats des équipes présentes, et l'or du joueur.
   mettreAJourParts(partie) {
     const totaux = Menu.compterSoldats(partie);
     const presentes = new Set(partie.ordis.map((ordi) => ordi.equipe)).add(EQUIPE_JOUEUR);
@@ -191,5 +220,9 @@ const Menu = {
       segment.style.background = partie.palette[nom].couleur;
       segment.textContent = totaux[nom];
     }
+
+    const or = String(Math.floor(partie.or[EQUIPE_JOUEUR] || 0));
+    const affichage = document.getElementById('or-partie');
+    if (affichage.textContent !== or) affichage.textContent = or;
   },
 };

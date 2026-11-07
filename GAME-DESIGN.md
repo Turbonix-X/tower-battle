@@ -13,7 +13,7 @@ pour capturer les tours neutres et ennemies.
 
 ## 2. Plateforme
 
-- **Technologies :** HTML, CSS et JavaScript
+- **Technologies :** HTML, CSS et JavaScript, avec Three.js pour la 3D (WebGL)
 - **Où y jouer :** dans le navigateur
 - **Publication :** GitHub Pages
 
@@ -45,7 +45,7 @@ Ce nombre de lignes est rangé par type de tour, car il changera plus tard selon
 
 ### Production
 
-- Les tours bleues et rouges gagnent **1 soldat par seconde**.
+- Les tours des équipes produisent des soldats selon leur type (voir « Types de tours »), jusqu'à leur capacité. Une tour pleine arrête de produire.
 - Les tours neutres ne produisent rien : elles ont un nombre fixe de soldats et de PV.
 
 ### Envoyer des soldats
@@ -70,10 +70,10 @@ Ce nombre de lignes est rangé par type de tour, car il changera plus tard selon
 **Sur une tour ennemie ou neutre :**
 
 - S'il reste des soldats dans la tour, il en combat un et les deux disparaissent (sauf si l'un des camps compte double).
-- S'il n'y a plus de soldats dans la tour, il retire 1 PV.
-- À 0 PV, la tour change d'équipe et ses PV reviennent au maximum. Les soldats qui arrivent ensuite comptent comme nouveaux soldats.
+- S'il n'y a plus de soldats dans la tour, il retire des PV selon son type et ses améliorations (1 PV sur une caserne de base).
+- À 0 PV, la tour change d'équipe, perd ses améliorations et ses PV reviennent au maximum. Les soldats qui arrivent ensuite comptent comme nouveaux soldats.
 
-**Sur sa propre tour :** il ajoute 1 au compteur de soldats, mais ne soigne pas les PV.
+**Sur sa propre tour :** il ajoute 1 au compteur de soldats, sans dépasser la capacité, mais ne soigne pas les PV.
 
 ### Précisions choisies pendant le développement
 
@@ -100,6 +100,18 @@ Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
 - Un bouton **Pause** et un bouton **Recommencer** en haut de l'écran, avec le numéro du niveau.
 - **Échap** (ou le bouton Pause) ouvre un mini menu qui met le jeu en pause : Reprendre, Recommencer, Menu, avec le numéro de version. Échap referme le mini menu.
 - Une barre en haut montre la part de soldats de chaque équipe : ceux dans ses tours et ceux en route. Les tours neutres ne comptent pas.
+- L'or de partie est affiché en haut de l'écran pendant la partie, et les pièces sur l'écran titre.
+- Toucher une de mes tours sans glisser ouvre le menu rond d'amélioration.
+- Garder le doigt ou la souris sur une tour affiche sa fiche d'info.
+
+### Affichage en 3D
+
+- Le jeu est en 3D, sur une île au milieu de la mer. Sur un écran en hauteur, la caméra tourne pour que le joueur soit en bas.
+- Animations : arrivée de la caméra sur la carte, tours qui sortent de terre, soldats qui trottinent, lignes aux chevrons qui avancent, drapeaux, fumée, roue de la mine et feu de camp.
+- Effets : éclairs et étincelles en combat, tour qui tremble sous les coups, colonne de lumière et onde de choc à la capture, secousse de caméra, spirale d'étincelles à l'amélioration, feu d'artifice à la victoire, lumière qui baisse à la défaite.
+- Derrière le menu, une vraie bataille se joue toute seule. Elle ne touche pas à la sauvegarde.
+- Les compteurs, points de niveau et barres de PV restent écrits à plat pour être lisibles.
+- Sur un appareil qui peine, la qualité baisse toute seule. Si le navigateur ne sait pas afficher de 3D, un message l'explique.
 
 ### Menu
 
@@ -131,15 +143,54 @@ Les équipes supplémentaires ne sont présentes que dans certaines parties.
 
 ## 5. Types de tours
 
-*À compléter*
+Toutes les valeurs sont rangées dans `js/donnees-tours.js` : pour ajouter un type, il suffit d'y ajouter une fiche.
+
+| Type | Soldats par seconde | Soldats ennemis pour retirer des PV | Capacité | PV de départ | Particularité |
+|------|---------------------|-------------------------------------|----------|--------------|---------------|
+| **Caserne** | 1 | 1 soldat = 1 PV | 50 | ×1 | La tour de base |
+| **Forteresse** | 0,5 | 2 soldats = 1 PV | 70 | ×1,5 | Très résistante |
+| **Campement** | 1 | 1 soldat = 2 PV | 35 | ×0,8 | Ses soldats marchent 2 fois plus vite |
+| **Mine d'or** | 0 | 1 soldat = 1 PV | 20 | ×0,8 | N'attaque pas, produit 1 or par seconde |
+
+Chaque type a son propre dessin 3D. Le générateur place les types de plus en plus variés au fil des niveaux : mines à partir du niveau 12, forteresses à partir du 15, campements à partir du 25, et types spéciaux chez les ennemis à partir du 80. Le joueur démarre toujours avec une caserne.
 
 ## 6. Améliorations
 
-*À compléter*
+Chaque tour a **6 points d'amélioration** au total, à répartir librement entre 3 statistiques (par exemple 3-2-1, 1-5-0 ou 2-2-2).
+
+| Statistique | Effet d'un point |
+|-------------|------------------|
+| **Renforcement** | +25 % des PV de base, et +25 % de soldats ennemis nécessaires pour retirer des PV |
+| **Production** | +30 % de soldats par seconde (+30 % d'or sur une mine) |
+| **Capacité** | +20 % de la capacité de base. Une tour pleine arrête de produire |
+
+- **Prix :** chaque point coûte de l'or de partie, 1,5 fois plus cher que le précédent sur cette tour. Sur une caserne : 5, 8, 11, 17, 25, puis 38 or.
+- **Menu rond :** toucher une de mes tours ouvre un menu autour d'elle, avec les 3 améliorations, leur prix et leur effet. Le jeu continue pendant ce temps.
+- **Apparence :** murs plus épais pour le renforcement, cheminées puis atelier pour la production, tour plus haute et plus large, puis réserves, pour la capacité. Une belle animation accompagne chaque achat.
+
+### Précisions choisies pendant le développement
+
+Ces points n'étaient pas précisés dans la demande. Ils peuvent changer.
+
+- **Capture :** une tour capturée perd toutes ses améliorations.
+- **Renfort :** le point de renforcement ajoute aussi ses PV à la tour tout de suite.
+- **Tours trop remplies :** une tour ne perd jamais de soldats à cause de sa capacité : si elle commence avec plus de soldats que prévu, sa capacité monte à ce nombre. Les renforts au-delà de la capacité sont perdus.
+- **Ordis :** les ordis moyens et forts dépensent aussi leur or. Le défenseur renforce, le rusé augmente la capacité, les autres la production.
 
 ## 7. Argent
 
-*À compléter*
+Il y a deux sortes d'argent.
+
+### L'or de partie
+
+- Gagné pendant un niveau, il sert à améliorer les tours pendant ce niveau, puis disparaît.
+- Chaque tour rapporte un tout petit peu d'or : 0,1 par seconde. Une mine d'or en rapporte 1 par seconde.
+- Le joueur démarre chaque niveau avec 5 or (20 au niveau 10 du tutoriel).
+
+### Les pièces
+
+- Gagnées à la fin de chaque niveau gagné : 10 pièces par étoile, le double sur un boss.
+- Sauvegardées, elles servent à débloquer des choses dans le menu. **Il n'y a encore rien à débloquer : la boutique reste à définir.**
 
 ## 8. Décors
 
@@ -187,7 +238,7 @@ Un chemin qui serpente, par pages de 50 niveaux. Les niveaux se débloquent un p
 
 ### Réglages prévus pour plus tard
 
-Le générateur a déjà des réglages vides : décor, obstacles, types de tours, brouillard.
+Le générateur a déjà des réglages vides : décor, obstacles, brouillard.
 
 ## 13. Ordis
 

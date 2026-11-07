@@ -2,10 +2,34 @@
 
 // La personnalité varie le style de jeu, quelle que soit la force.
 const PERSONNALITES = {
-  equilibre: { margeAttaque: 1, envieDeDefendre: 1, neutresEnPremier: true, opportuniste: false },
-  agressif: { margeAttaque: 0.8, envieDeDefendre: 0.6, neutresEnPremier: false, opportuniste: false },
-  defenseur: { margeAttaque: 1.3, envieDeDefendre: 1, neutresEnPremier: true, opportuniste: false },
-  ruse: { margeAttaque: 1, envieDeDefendre: 0.9, neutresEnPremier: true, opportuniste: true },
+  equilibre: {
+    margeAttaque: 1,
+    envieDeDefendre: 1,
+    neutresEnPremier: true,
+    opportuniste: false,
+    statistiquePreferee: 'production',
+  },
+  agressif: {
+    margeAttaque: 0.8,
+    envieDeDefendre: 0.6,
+    neutresEnPremier: false,
+    opportuniste: false,
+    statistiquePreferee: 'production',
+  },
+  defenseur: {
+    margeAttaque: 1.3,
+    envieDeDefendre: 1,
+    neutresEnPremier: true,
+    opportuniste: false,
+    statistiquePreferee: 'renforcement',
+  },
+  ruse: {
+    margeAttaque: 1,
+    envieDeDefendre: 0.9,
+    neutresEnPremier: true,
+    opportuniste: true,
+    statistiquePreferee: 'capacite',
+  },
 };
 
 const Ordi = {
@@ -103,6 +127,7 @@ const Ordi = {
   // La défense passe en premier. La personnalité décide ensuite qui attaquer d'abord.
   jouerNormal(partie, ordi) {
     Ordi.nettoyerLignes(partie, ordi);
+    Ordi.ameliorer(partie, ordi);
     const { personnalite } = ordi;
     for (let i = 0; i < Ordi.actionsParTour(ordi.force); i++) {
       const defend = Math.random() < personnalite.envieDeDefendre && Ordi.defendre(partie, ordi);
@@ -152,9 +177,19 @@ const Ordi = {
     let defenseurs = cible.soldats;
     if (EQUIPES[cible.equipe].produit) {
       const trajet = distance / Soldats.VITESSE;
-      defenseurs = (defenseurs + trajet * Tours.SOLDATS_PAR_SECONDE * cible.production) * 1.5;
+      defenseurs = (defenseurs + trajet * Tours.production(cible)) * 1.5;
     }
-    return Math.ceil(defenseurs * prixDefenseur) + cible.pv;
+    return Math.ceil(defenseurs * prixDefenseur + cible.pv / Tours.degatsParSoldat(cible));
+  },
+
+  // Les ordis moyens et forts dépensent leur or pour améliorer leur tour la mieux remplie,
+  // chacun selon son style.
+  ameliorer(partie, ordi) {
+    if (Ordi.estFaible(ordi)) return;
+    const tour = Ordi.sesTours(partie, ordi)
+      .filter((t) => Ameliorations.peutAcheter(partie, t))
+      .sort((a, b) => b.soldats - a.soldats)[0];
+    if (tour) Ameliorations.acheter(partie, tour, ordi.personnalite.statistiquePreferee);
   },
 
   // Parfois, selon la force, l'ordi essaie son deuxième meilleur choix avant le meilleur.

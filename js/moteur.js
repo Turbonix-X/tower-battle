@@ -1,44 +1,10 @@
 // moteur.js — Le cœur du jeu : lance la partie, fait tourner la boucle de jeu et dessine la carte.
 
-// La vue fait la conversion entre la carte (taille fixe) et l'écran (taille variable).
-// Sur un écran en hauteur, la carte est tournée pour le remplir, avec le joueur en bas.
-const Vue = {
-  echelle: 1,
-  decalageX: 0,
-  decalageY: 0,
-  tournee: false,
-  largeurCarte: 0,
-  hauteurCarte: 0,
-
-  ajuster(largeurCarte, hauteurCarte, largeurEcran, hauteurEcran) {
-    Vue.largeurCarte = largeurCarte;
-    Vue.hauteurCarte = hauteurCarte;
-    Vue.tournee = hauteurEcran > largeurEcran;
-    const largeurVue = Vue.tournee ? hauteurCarte : largeurCarte;
-    const hauteurVue = Vue.tournee ? largeurCarte : hauteurCarte;
-    Vue.echelle = Math.min(largeurEcran / largeurVue, hauteurEcran / hauteurVue);
-    Vue.decalageX = (largeurEcran - largeurVue * Vue.echelle) / 2;
-    Vue.decalageY = (hauteurEcran - hauteurVue * Vue.echelle) / 2;
-  },
-
-  versEcran(x, y) {
-    return Vue.tournee
-      ? {
-          x: Vue.decalageX + y * Vue.echelle,
-          y: Vue.decalageY + (Vue.largeurCarte - x) * Vue.echelle,
-        }
-      : { x: Vue.decalageX + x * Vue.echelle, y: Vue.decalageY + y * Vue.echelle };
-  },
-
-  versMonde(ecranX, ecranY) {
-    const a = (ecranX - Vue.decalageX) / Vue.echelle;
-    const b = (ecranY - Vue.decalageY) / Vue.echelle;
-    return Vue.tournee ? { x: Vue.largeurCarte - b, y: a } : { x: a, y: b };
-  },
-};
-
 const Moteur = {
   DT_MAX: 0.1, // évite un grand saut quand on revient sur un onglet en arrière-plan
+  NIVEAU_DEMO: 61, // la bataille affichée derrière le menu
+  DUREE_MAX_DEMO: 120,
+  EVENEMENTS_MAX: 400,
   canvas: null,
   ctx: null,
   partie: null,
@@ -49,9 +15,14 @@ const Moteur = {
     Sauvegarde.charger();
     Moteur.canvas = document.getElementById('jeu');
     Moteur.ctx = Moteur.canvas.getContext('2d');
-    Moteur.partie = Niveaux.creerPartie(1);
 
-    Moteur.redimensionner();
+    Vue.installer();
+    if (!Scene3D.installer(document.getElementById('scene3d'))) {
+      Menu.afficherErreur3D();
+      return;
+    }
+
+    Moteur.partie = Moteur.creerDemo();
     window.addEventListener('resize', Moteur.redimensionner);
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !e.repeat) Moteur.touchEchap();
@@ -60,7 +31,7 @@ const Moteur = {
     Lignes.installerControles(Moteur.canvas, Vue, () =>
       Moteur.etat === 'enJeu' ? Moteur.partie : null,
     );
-    FondMenu.installer();
+    InterfaceTours.installer(Vue, () => (Moteur.etat === 'enJeu' ? Moteur.partie : null));
     Menu.installer({
       jouer: () => Moteur.nouvellePartie(Sauvegarde.donnees.niveauAtteint),
       choisirNiveau: Moteur.nouvellePartie,
@@ -78,20 +49,42 @@ const Moteur = {
   },
 
   nouvellePartie(numero) {
+    InterfaceTours.fermerTout();
     Moteur.partie = Niveaux.creerPartie(numero);
     Moteur.etat = 'enJeu';
-    Moteur.redimensionner();
     Menu.afficherJeu(Moteur.partie);
+    Moteur.redimensionner();
   },
 
   allerAuMenu() {
+    InterfaceTours.fermerTout();
+    Moteur.partie = Moteur.creerDemo();
     Moteur.etat = 'menu';
     Menu.afficherTitre();
+    Moteur.redimensionner();
+  },
+
+  // Derrière le menu, une vraie bataille se joue toute seule, sans toucher à la sauvegarde.
+  creerDemo() {
+    const partie = Niveaux.creerPartie(Moteur.NIVEAU_DEMO);
+    partie.ordis.push(Ordi.creer({ equipe: EQUIPE_JOUEUR, force: 6 }));
+    return partie;
+  },
+
+  mettreAJourDemo(dt) {
+    const partie = Moteur.partie;
+    Moteur.avancer(partie, dt);
+    const equipes = new Set(partie.tours.map((tour) => tour.equipe));
+    equipes.delete('neutre');
+    if (equipes.size <= 1 || partie.temps > Moteur.DUREE_MAX_DEMO) {
+      Moteur.partie = Moteur.creerDemo();
+    }
   },
 
   // Échap met en pause, et reprend si le mini menu est déjà ouvert.
   touchEchap() {
-    if (Moteur.etat === 'enJeu' || Moteur.etat === 'pause') Moteur.basculerPause();
+    if (InterfaceTours.tourRoue) InterfaceTours.fermerRoue();
+    else if (Moteur.etat === 'enJeu' || Moteur.etat === 'pause') Moteur.basculerPause();
     else if (Moteur.etat === 'menu') Menu.retourDepuisSousEcran();
   },
 
@@ -100,6 +93,7 @@ const Moteur = {
       Moteur.etat = 'pause';
       Moteur.partie.trace = null;
       Moteur.partie.coupe = null;
+      InterfaceTours.fermerTout();
       Menu.afficherPause();
     } else if (Moteur.etat === 'pause') {
       Moteur.etat = 'enJeu';
@@ -119,8 +113,11 @@ const Moteur = {
     Moteur.partie.coupe = null;
 
     const etoiles = victoire ? Niveaux.etoiles(niveau, temps) : 0;
-    if (victoire) Sauvegarde.enregistrerVictoire(numero, etoiles);
-    Menu.afficherFin({ victoire, temps, etoiles, aUnSuivant: numero < Niveaux.NOMBRE });
+    const pieces = victoire ? Niveaux.piecesGagnees(niveau, etoiles) : 0;
+    if (victoire) Sauvegarde.enregistrerVictoire(numero, etoiles, pieces);
+    InterfaceTours.fermerTout();
+    Scene3D.finDePartie(victoire);
+    Menu.afficherFin({ victoire, temps, etoiles, pieces, aUnSuivant: numero < Niveaux.NOMBRE });
   },
 
   redimensionner() {
@@ -130,6 +127,7 @@ const Moteur = {
     canvas.width = Math.round(cadre.width * pixels);
     canvas.height = Math.round(cadre.height * pixels);
     ctx.setTransform(pixels, 0, 0, pixels, 0, 0);
+    Scene3D.redimensionner(cadre.width, cadre.height);
     Vue.ajuster(partie.largeur, partie.hauteur, cadre.width, cadre.height);
   },
 
@@ -138,71 +136,52 @@ const Moteur = {
     Moteur.tempsPrecedent = temps;
     // La vitesse x2 joue simplement deux fois plus de temps à chaque image.
     if (Moteur.etat === 'enJeu') Moteur.mettreAJour(dt * Sauvegarde.donnees.parametres.vitesse);
-    if (Moteur.etat === 'menu') {
-      FondMenu.animer(dt);
-    } else {
-      Moteur.dessiner();
-      Menu.mettreAJourParts(Moteur.partie);
-    }
+    if (Moteur.etat === 'menu') Moteur.mettreAJourDemo(dt);
+    Moteur.dessiner(dt);
     requestAnimationFrame(Moteur.boucle);
+  },
+
+  // Les règles du jeu, sans la vérification de fin de partie.
+  avancer(partie, dt) {
+    partie.temps += dt;
+    Ordi.mettreAJour(partie, dt);
+    for (const tour of partie.tours) Tours.mettreAJour(partie, tour, dt);
+    Lignes.mettreAJour(partie, dt);
+    Soldats.mettreAJour(partie, dt);
+    if (partie.evenements.length > Moteur.EVENEMENTS_MAX) partie.evenements.length = 0;
   },
 
   mettreAJour(dt) {
     const partie = Moteur.partie;
-    partie.temps += dt;
     Tutoriel.mettreAJour(partie, dt);
-    Ordi.mettreAJour(partie, dt);
-    for (const tour of partie.tours) Tours.mettreAJour(tour, dt);
-    Lignes.mettreAJour(partie, dt);
-    Soldats.mettreAJour(partie, dt);
+    Moteur.avancer(partie, dt);
     Moteur.verifierFin();
   },
 
-  dessiner() {
-    const { ctx, canvas, partie } = Moteur;
+  dessiner(dt) {
+    const { ctx, canvas, partie, etat } = Moteur;
     const pixels = window.devicePixelRatio || 1;
 
-    ctx.fillStyle = '#1d3b27';
-    ctx.fillRect(0, 0, canvas.width / pixels, canvas.height / pixels);
-    Moteur.dessinerCarte();
+    Scene3D.dessiner(partie, dt, etat);
+    ctx.clearRect(0, 0, canvas.width / pixels, canvas.height / pixels);
+    if (etat === 'menu') return;
 
-    Lignes.dessiner(ctx, partie, Vue);
-    Soldats.dessiner(ctx, partie, Vue);
-    Soldats.dessinerCombats(ctx, partie, Vue);
+    // Ce qui reste écrit à plat par-dessus la 3D : compteurs, gestes et main du tutoriel.
     Lignes.dessinerGeste(ctx, partie, Vue);
-    for (const tour of partie.tours) {
-      const visee = partie.trace && (partie.trace.cible === tour || partie.trace.depart === tour);
-      Tours.dessiner(ctx, tour, Vue, partie.palette, visee);
+    const { trace } = partie;
+    const parProfondeur = [...partie.tours].sort((a, b) => Moteur.profondeur(a) - Moteur.profondeur(b));
+    for (const tour of parProfondeur) {
+      const visee = trace && trace.aBouge && (trace.cible === tour || trace.depart === tour);
+      Tours.dessinerEtiquette(ctx, tour, Vue, visee);
     }
     Tutoriel.dessiner(ctx, partie, Vue);
+    Menu.mettreAJourParts(partie);
+    InterfaceTours.mettreAJour(partie);
   },
 
-  dessinerCarte() {
-    const { ctx, partie } = Moteur;
-    const a = Vue.versEcran(0, 0);
-    const b = Vue.versEcran(partie.largeur, partie.hauteur);
-    const gauche = Math.min(a.x, b.x);
-    const haut = Math.min(a.y, b.y);
-    const largeur = Math.abs(b.x - a.x);
-    const hauteur = Math.abs(b.y - a.y);
-
-    ctx.fillStyle = '#2f5d3a';
-    ctx.fillRect(gauche, haut, largeur, hauteur);
-
-    // Un quadrillage discret pour donner du relief au terrain.
-    const pas = 80 * Vue.echelle;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let x = gauche + pas; x < gauche + largeur; x += pas) {
-      ctx.moveTo(x, haut);
-      ctx.lineTo(x, haut + hauteur);
-    }
-    for (let y = haut + pas; y < haut + hauteur; y += pas) {
-      ctx.moveTo(gauche, y);
-      ctx.lineTo(gauche + largeur, y);
-    }
-    ctx.stroke();
+  // Les étiquettes du fond sont dessinées d'abord, celles du devant restent au-dessus.
+  profondeur(tour) {
+    return Vue.tournee ? -tour.x : tour.y;
   },
 };
 

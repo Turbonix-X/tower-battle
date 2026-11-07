@@ -10,8 +10,8 @@ const Sauvegarde = {
       niveauAtteint: 1,
       etoiles: {}, // numéro du niveau -> meilleur score (1 à 3)
       parametres: { musique: 70, effets: 80, vitesse: 1, langue: 'fr' },
-      argent: 0, // pour plus tard
-      toursDebloquees: ['base'], // pour plus tard
+      pieces: 0, // gagnées à la fin des niveaux, pour débloquer des choses dans le menu
+      toursDebloquees: ['caserne'], // pour plus tard
     };
   },
 
@@ -46,9 +46,11 @@ const Sauvegarde = {
     if ([1, 2].includes(parametres.vitesse)) propre.parametres.vitesse = parametres.vitesse;
     if (['fr', 'en'].includes(parametres.langue)) propre.parametres.langue = parametres.langue;
 
-    if (Number.isFinite(lu.argent) && lu.argent >= 0) propre.argent = lu.argent;
+    // "argent" est l'ancien nom des pièces, dans les sauvegardes d'avant la version 1.6.
+    const pieces = lu.pieces ?? lu.argent;
+    if (Number.isFinite(pieces) && pieces >= 0) propre.pieces = pieces;
     if (Array.isArray(lu.toursDebloquees) && lu.toursDebloquees.length > 0) {
-      propre.toursDebloquees = lu.toursDebloquees;
+      propre.toursDebloquees = lu.toursDebloquees.map((t) => (t === 'base' ? 'caserne' : t));
     }
     return propre;
   },
@@ -70,9 +72,10 @@ const Sauvegarde = {
     Sauvegarde.donnees = Sauvegarde.parDefaut();
   },
 
-  // Débloque le niveau suivant et garde le meilleur nombre d'étoiles.
-  enregistrerVictoire(numero, etoiles) {
+  // Débloque le niveau suivant, garde le meilleur nombre d'étoiles et ajoute les pièces gagnées.
+  enregistrerVictoire(numero, etoiles, pieces) {
     const { donnees } = Sauvegarde;
+    donnees.pieces += pieces;
     donnees.niveauAtteint = Math.max(
       donnees.niveauAtteint,
       Math.min(numero + 1, Sauvegarde.NIVEAU_MAX),

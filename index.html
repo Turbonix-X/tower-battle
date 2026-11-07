@@ -6,27 +6,37 @@
   <title>Tower Battle</title>
   <!-- Le "?v=" est à changer à chaque version : il oblige le navigateur à reprendre les
        nouveaux fichiers, au lieu de mélanger cette page avec d'anciens scripts gardés en mémoire. -->
-  <link rel="stylesheet" href="css/style.css?v=1.5">
+  <link rel="stylesheet" href="css/style.css?v=1.6">
 </head>
-<body>
+<body class="mode-menu">
+  <span id="version" class="texte-version"></span>
+
   <header id="barre-haut">
     <div id="barre-boutons">
-      <span id="version" class="texte-version"></span>
       <span id="info-niveau"></span>
+      <span id="bloc-or" title="Or de partie"><span aria-hidden="true">🪙</span> <span id="or-partie">0</span></span>
       <button id="bouton-pause" type="button" data-texte="pause"></button>
       <button id="bouton-recommencer" type="button" data-texte="recommencer"></button>
     </div>
     <div id="barre-parts" role="img" data-texte-aria="partsAria"></div>
   </header>
 
-  <canvas id="jeu" data-texte-aria="carteAria"></canvas>
+  <!-- La 3D, puis par-dessus une couche à plat pour les compteurs et les gestes. -->
+  <main id="zone-jeu">
+    <canvas id="scene3d" aria-hidden="true"></canvas>
+    <canvas id="jeu" data-texte-aria="carteAria"></canvas>
+  </main>
   <div id="bulle-tutoriel" role="status"></div>
+  <div id="roue"></div>
+  <div id="fiche" role="status"></div>
 
   <!-- L'écran titre -->
-  <section id="ecran-titre" class="ecran ecran-opaque">
-    <canvas id="fond-menu" aria-hidden="true"></canvas>
+  <section id="ecran-titre" class="ecran ecran-titre">
+    <div id="bloc-pieces" title="Pièces">
+      <span aria-hidden="true">🪙</span> <span id="pieces-titre">0</span>
+    </div>
     <div class="contenu-titre">
-      <h1>Tower Battle</h1>
+      <h1><span class="mot-titre">Tower</span> <span class="mot-titre">Battle</span></h1>
       <div class="boutons-titre">
         <button id="bouton-jouer" type="button" class="bouton-principal" data-texte="jouer"></button>
         <button id="bouton-niveaux" type="button" data-texte="niveaux"></button>
@@ -37,7 +47,7 @@
   </section>
 
   <!-- La carte des niveaux -->
-  <section id="ecran-niveaux" class="ecran ecran-opaque ecran-defilant">
+  <section id="ecran-niveaux" class="ecran ecran-flou ecran-defilant">
     <div class="panneau-niveaux">
       <div class="entete-niveaux">
         <button type="button" class="bouton-retour" data-texte="retour"></button>
@@ -52,7 +62,7 @@
   </section>
 
   <!-- Les paramètres -->
-  <section id="ecran-parametres" class="ecran ecran-opaque ecran-defilant">
+  <section id="ecran-parametres" class="ecran ecran-flou ecran-defilant">
     <div class="panneau">
       <h2 data-texte="parametres"></h2>
       <label class="reglage">
@@ -93,7 +103,7 @@
   </section>
 
   <!-- Les crédits -->
-  <section id="ecran-credits" class="ecran ecran-opaque">
+  <section id="ecran-credits" class="ecran ecran-flou">
     <div class="panneau">
       <h2 data-texte="credits"></h2>
       <p data-texte="creditsPar"></p>
@@ -119,26 +129,38 @@
       <h2 id="fin-titre"></h2>
       <p id="fin-etoiles"></p>
       <p id="fin-temps"></p>
+      <p id="fin-pieces"></p>
       <button id="bouton-suivant" type="button" class="bouton-principal" data-texte="suivant"></button>
       <button id="bouton-rejouer" type="button" data-texte="rejouer"></button>
       <button id="bouton-menu" type="button" data-texte="menu"></button>
     </div>
   </section>
 
+  <!-- Si le navigateur ne sait pas afficher de 3D -->
+  <div id="erreur-3d" hidden>
+    <p data-texte="erreur3d"></p>
+  </div>
+
   <!-- moteur.js reste en dernier : il lance le jeu quand tout le reste est chargé. -->
-  <script src="js/sauvegarde.js?v=1.5"></script>
-  <script src="js/textes.js?v=1.5"></script>
-  <script src="js/sons.js?v=1.5"></script>
-  <script src="js/tours.js?v=1.5"></script>
-  <script src="js/soldats.js?v=1.5"></script>
-  <script src="js/lignes.js?v=1.5"></script>
-  <script src="js/ordi.js?v=1.5"></script>
-  <script src="js/generateur.js?v=1.5"></script>
-  <script src="js/tutoriel.js?v=1.5"></script>
-  <script src="js/niveaux.js?v=1.5"></script>
-  <script src="js/fondmenu.js?v=1.5"></script>
-  <script src="js/carteniveaux.js?v=1.5"></script>
-  <script src="js/menu.js?v=1.5"></script>
-  <script src="js/moteur.js?v=1.5"></script>
+  <script src="js/lib/three.min.js?v=1.6"></script>
+  <script src="js/sauvegarde.js?v=1.6"></script>
+  <script src="js/textes.js?v=1.6"></script>
+  <script src="js/sons.js?v=1.6"></script>
+  <script src="js/donnees-tours.js?v=1.6"></script>
+  <script src="js/tours.js?v=1.6"></script>
+  <script src="js/ameliorations.js?v=1.6"></script>
+  <script src="js/soldats.js?v=1.6"></script>
+  <script src="js/lignes.js?v=1.6"></script>
+  <script src="js/ordi.js?v=1.6"></script>
+  <script src="js/generateur.js?v=1.6"></script>
+  <script src="js/tutoriel.js?v=1.6"></script>
+  <script src="js/niveaux.js?v=1.6"></script>
+  <script src="js/modeles3d.js?v=1.6"></script>
+  <script src="js/camera.js?v=1.6"></script>
+  <script src="js/scene3d.js?v=1.6"></script>
+  <script src="js/interface-tours.js?v=1.6"></script>
+  <script src="js/carteniveaux.js?v=1.6"></script>
+  <script src="js/menu.js?v=1.6"></script>
+  <script src="js/moteur.js?v=1.6"></script>
 </body>
 </html>

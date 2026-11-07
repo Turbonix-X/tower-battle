@@ -1,7 +1,9 @@
 // lignes.js — Les lignes entre les tours : les tracer, les retenir et les retirer.
+// Le dessin 3D des lignes est dans scene3d.js. Ici, on ne dessine que le geste en cours.
 
 const Lignes = {
   SECONDES_ENTRE_SOLDATS: 0.5, // soit environ 2 soldats par seconde
+  DEPLACEMENT_MAX_TOUCHER: 12, // en pixels : au-delà, ce n'est plus un simple toucher
 
   // Ce que coûte à la tour un soldat envoyé sur un adversaire.
   // À 2 soldats par seconde, elle perd 0,8 par seconde et en gagne 1 : son compteur monte.
@@ -67,7 +69,9 @@ const Lignes = {
       if (ligne.depart.equipe !== EQUIPE_JOUEUR) return true;
       const a = vue.versEcran(ligne.depart.x, ligne.depart.y);
       const b = vue.versEcran(ligne.arrivee.x, ligne.arrivee.y);
-      return !Lignes.segmentsSeCroisent(p1, p2, a, b);
+      const coupee = Lignes.segmentsSeCroisent(p1, p2, a, b);
+      if (coupee) partie.evenements.push({ type: 'coupe', ligne, x: (ligne.depart.x + ligne.arrivee.x) / 2, y: (ligne.depart.y + ligne.arrivee.y) / 2 });
+      return !coupee;
     });
   },
 
@@ -81,27 +85,36 @@ const Lignes = {
 
   // Souris et doigt passent par les mêmes événements "pointer".
   // Un geste qui part de ma tour trace une ligne. Partout ailleurs, il coupe.
+  // Toucher ma tour sans bouger ouvre le menu d'amélioration.
   // "obtenirPartie" renvoie la partie en cours, ou rien si les gestes sont bloqués.
   installerControles(canvas, vue, obtenirPartie) {
     const lirePointeur = (e, partie) => {
       const cadre = canvas.getBoundingClientRect();
       const x = e.clientX - cadre.left;
       const y = e.clientY - cadre.top;
-      const monde = vue.versMonde(x, y);
-      // Zone de prise assez grande pour un doigt, même quand la carte est petite.
-      const portee = Math.max(Tours.RAYON * 1.25, 28 / vue.echelle);
-      return { x, y, tour: Tours.trouverA(partie.tours, monde.x, monde.y, portee) };
+      return { x, y, tour: Tours.trouverSurEcran(partie.tours, vue, x, y) };
     };
 
     canvas.addEventListener('pointerdown', (e) => {
       const partie = obtenirPartie();
       if (!partie || partie.trace || partie.coupe || e.button !== 0) return;
+      InterfaceTours.fermerRoue();
       const { x, y, tour } = lirePointeur(e, partie);
       canvas.setPointerCapture(e.pointerId);
+      InterfaceTours.debutAppui(tour, x, y);
       if (tour && tour.equipe === EQUIPE_JOUEUR) {
-        partie.trace = { pointeur: e.pointerId, depart: tour, cible: null, ecranX: x, ecranY: y };
+        partie.trace = {
+          pointeur: e.pointerId,
+          depart: tour,
+          cible: null,
+          ecranX: x,
+          ecranY: y,
+          departX: x,
+          departY: y,
+          aBouge: false,
+        };
       } else {
-        partie.coupe = { pointeur: e.pointerId, points: [{ x, y }] };
+        partie.coupe = { pointeur: e.pointerId, points: [{ x, y }], departX: x, departY: y };
       }
     });
 
@@ -115,9 +128,18 @@ const Lignes = {
         trace.ecranX = x;
         trace.ecranY = y;
         trace.cible = tour === trace.depart ? null : tour;
+        if (Math.hypot(x - trace.departX, y - trace.departY) > Lignes.DEPLACEMENT_MAX_TOUCHER) {
+          trace.aBouge = true;
+          InterfaceTours.annulerAppui();
+        }
       } else if (coupe && coupe.pointeur === e.pointerId) {
         Lignes.couper(partie, vue, coupe.points[coupe.points.length - 1], { x, y });
         coupe.points.push({ x, y });
+        if (Math.hypot(x - coupe.departX, y - coupe.departY) > Lignes.DEPLACEMENT_MAX_TOUCHER) {
+          InterfaceTours.annulerAppui();
+        }
+      } else if (e.pointerType === 'mouse') {
+        InterfaceTours.survol(tour, x, y);
       }
     });
 
@@ -125,12 +147,16 @@ const Lignes = {
       const partie = obtenirPartie();
       if (!partie) return;
       const { trace, coupe } = partie;
+      const ficheVue = InterfaceTours.finAppui();
 
       if (trace && trace.pointeur === e.pointerId) {
         const { tour } = lirePointeur(e, partie);
         partie.trace = null;
-        // La tour a pu être perdue pendant le tracé.
-        if (tour && trace.depart.equipe === EQUIPE_JOUEUR) {
+        if (!trace.aBouge) {
+          // Un simple toucher : on ouvre le menu, sauf si la fiche d'info vient d'être lue.
+          if (!ficheVue && trace.depart.equipe === EQUIPE_JOUEUR) InterfaceTours.ouvrirRoue(trace.depart);
+        } else if (tour && trace.depart.equipe === EQUIPE_JOUEUR) {
+          // La tour a pu être perdue pendant le tracé.
           Lignes.ajouter(partie, trace.depart, tour);
         }
       } else if (coupe && coupe.pointeur === e.pointerId) {
@@ -140,57 +166,13 @@ const Lignes = {
 
     canvas.addEventListener('pointercancel', (e) => {
       const partie = obtenirPartie();
+      InterfaceTours.finAppui();
       if (!partie) return;
       if (partie.trace && partie.trace.pointeur === e.pointerId) partie.trace = null;
       if (partie.coupe && partie.coupe.pointeur === e.pointerId) partie.coupe = null;
     });
-  },
 
-  dessiner(ctx, partie, vue) {
-    const epaisseur = Math.max(3, 5 * vue.echelle);
-    ctx.lineCap = 'round';
-
-    for (const ligne of partie.lignes) {
-      const a = vue.versEcran(ligne.depart.x, ligne.depart.y);
-      const b = vue.versEcran(ligne.arrivee.x, ligne.arrivee.y);
-      const couleur = partie.palette[ligne.depart.equipe].couleur;
-
-      // Quand deux tours s'envoient des soldats, chacune dessine sa moitié de la ligne.
-      const face = partie.lignes.some(
-        (l) => l.depart === ligne.arrivee && l.arrivee === ligne.depart,
-      );
-      const fin = face ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : b;
-
-      ctx.globalAlpha = ligne.enPause ? 0.35 : 1;
-
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(fin.x, fin.y);
-      ctx.strokeStyle = '#10201a';
-      ctx.lineWidth = epaisseur + 3;
-      ctx.stroke();
-      ctx.strokeStyle = couleur;
-      ctx.lineWidth = epaisseur;
-      ctx.stroke();
-
-      // La flèche indique le sens, juste avant la tour d'arrivée.
-      const angle = Math.atan2(b.y - a.y, b.x - a.x);
-      const recul = face ? 0 : Tours.RAYON * vue.echelle * 1.1;
-      const pointeX = fin.x - Math.cos(angle) * recul;
-      const pointeY = fin.y - Math.sin(angle) * recul;
-      const taille = epaisseur * 3;
-      ctx.beginPath();
-      ctx.moveTo(pointeX, pointeY);
-      ctx.lineTo(pointeX - Math.cos(angle - 0.5) * taille, pointeY - Math.sin(angle - 0.5) * taille);
-      ctx.lineTo(pointeX - Math.cos(angle + 0.5) * taille, pointeY - Math.sin(angle + 0.5) * taille);
-      ctx.closePath();
-      ctx.fillStyle = couleur;
-      ctx.fill();
-      ctx.strokeStyle = '#10201a';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
+    canvas.addEventListener('pointerleave', () => InterfaceTours.survol(null));
   },
 
   // Ce qui suit la souris ou le doigt : la ligne en pointillés, ou le trait de coupe.
@@ -198,7 +180,7 @@ const Lignes = {
     const { trace, coupe } = partie;
     const epaisseur = Math.max(3, 5 * vue.echelle);
 
-    if (trace) {
+    if (trace && trace.aBouge) {
       const a = vue.versEcran(trace.depart.x, trace.depart.y);
       const b = trace.cible
         ? vue.versEcran(trace.cible.x, trace.cible.y)
@@ -210,15 +192,16 @@ const Lignes = {
       // En rouge si la tour ne peut pas envoyer une ligne de plus.
       ctx.strokeStyle = Lignes.peutPartirDe(partie, trace.depart) ? '#ffffff' : '#ff6b6b';
       ctx.lineWidth = epaisseur;
+      ctx.lineCap = 'round';
       ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    if (coupe) {
+    if (coupe && coupe.points.length > 1) {
       ctx.beginPath();
       coupe.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.stroke();

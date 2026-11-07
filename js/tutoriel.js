@@ -16,7 +16,14 @@ const Tutoriel = {
     const { tours, lignes, tutoriel } = partie;
     const existe = (de, vers) =>
       lignes.some((l) => l.depart === tours[de] && l.arrivee === tours[vers]);
+    // Une étape facultative ne bloque pas le conseil suivant indéfiniment.
+    if (etape.dureeMax && tutoriel.tempsEtape >= etape.dureeMax) return true;
+
     switch (etape.action) {
+      case 'amelioration':
+        return tours.some(
+          (tour) => tour.equipe === EQUIPE_JOUEUR && Ameliorations.pointsUtilises(tour) > 0,
+        );
       case 'ligne':
         return existe(etape.de, etape.vers);
       case 'coupe':
@@ -55,7 +62,11 @@ const Tutoriel = {
 
     let debut;
     let fin;
-    if (etape.action === 'ligne' || etape.main) {
+    if (etape.action === 'amelioration') {
+      // La main tapote la tour à améliorer.
+      debut = vue.versEcran(tours[etape.tour].x, tours[etape.tour].y, 20);
+      fin = { x: debut.x, y: debut.y + 14 };
+    } else if (etape.action === 'ligne' || etape.main) {
       const geste = etape.main || etape;
       debut = vue.versEcran(tours[geste.de].x, tours[geste.de].y);
       fin = vue.versEcran(tours[geste.vers].x, tours[geste.vers].y);
